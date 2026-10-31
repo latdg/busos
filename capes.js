@@ -21,8 +21,16 @@
   function pop(titol, cos, peu) {
     return `<div class="pop"><h3>${esc(titol)}</h3>${cos}${peu ? `<div class="m">${peu}</div>` : ""}</div>`;
   }
-  const avio = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10],
-    html: `<svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2c.8 0 1.3.8 1.3 1.8V9l7.7 4.5v2l-7.7-2.3v4.6l2.2 1.7V21L12 20l-3.5 1v-1.5l2.2-1.7v-4.6L3 15.5v-2L10.7 9V3.8C10.7 2.8 11.2 2 12 2z" fill="#37474f" stroke="#fff" stroke-width="1"/></svg>` });
+  // Les mateixes emoticones que fa servir el vigilant d'aeronaus (CATEGORIES de vigilant.py)
+  const EMOJI_AERO = {
+    "AERONAU SANITÀRIA": "🚑", "MITJÀ AERI D'EXTINCIÓ": "🚒", "POLICIA, TRÀNSIT O SEGURETAT": "🚓",
+    "SALVAMENT MARÍTIM": "🛟", "AERONAU MILITAR": "🎖️", "AERONAU MILITAR O D'ESTAT": "🏛️", "DRON": "🛸",
+    "JET PRIVAT O AEROTAXI": "💼", "TREBALLS AERIS": "📷", "HELICÒPTER (SERVEI SENSE IDENTIFICAR)": "🚁",
+    "PLANADOR, ULTRALLEUGER O GLOBUS": "🪂", "AVIONETA (AVIACIÓ GENERAL)": "🛩️",
+    "AERONAU SENSE IDENTIFICAR": "❓", "VOL COMERCIAL": "✈️",
+  };
+  const avio = a => L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
+    html: `<div class="emo">${EMOJI_AERO[String(a.categoria || "").toUpperCase()] || "✈️"}</div>` });
 
   async function carrega() {
     const out = {};
@@ -56,8 +64,8 @@
     n.v16 = (v.v16?.balises || []).length;
 
     (v.aeronaus || []).forEach(a => { if (!ok(a.lat, a.lon)) return;
-      L.marker([a.lat, a.lon], { icon: avio })
-        .bindPopup(pop(`${a.categoria || "Aeronau"}`, `${esc(a.hora)} h · ${esc(a.matricula)} ${esc(a.model)}<br>${esc(a.ubicacio)}<br>${a.altitud ? a.altitud + " m" : ""}${a.velocitat ? " · " + a.velocitat + " km/h" : ""}`, "Vigilant d'aeronaus · avui")).addTo(C.aero); });
+      L.marker([a.lat, a.lon], { icon: avio(a) })
+        .bindPopup(pop(`${EMOJI_AERO[String(a.categoria || "").toUpperCase()] || "✈️"} ${a.categoria || "Aeronau"}`, `${esc(a.hora)} h · ${esc(a.matricula)} ${esc(a.model)}<br>${esc(a.ubicacio)}<br>${a.altitud ? a.altitud + " m" : ""}${a.velocitat ? " · " + a.velocitat + " km/h" : ""}`, "Vigilant d'aeronaus · avui")).addTo(C.aero); });
     n.aero = (v.aeronaus || []).length;
 
 
@@ -97,7 +105,7 @@
     return [
       { g: "Mobilitat" },
       { id: "ly-v16", label: "Balises V16", sub: q("v16"), layer: C.v16, sw: D2("#e65100"), on: true },
-      { id: "ly-aero", label: "Aeronaus", sub: n.aero ? `${n.aero} avui` : "Cap avui", layer: C.aero, sw: D2("#37474f"), on: true },
+      { id: "ly-aero", label: "Aeronaus", sub: n.aero ? `${n.aero} avui` : "Cap avui", layer: C.aero, sw: `<span style="justify-self:center;font-size:15px;line-height:1">✈️</span>`, on: true },
       { g: "Territori" },
       { id: "ly-terra", label: "Terratrèmols", sub: `${n.terra} en 30 dies`, layer: C.terra, sw: D2("#5e35b1"), on: false },
       { g: "Emergències i talls" },
