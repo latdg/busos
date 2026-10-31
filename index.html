@@ -105,7 +105,7 @@ const map=L.map("map",{zoomSnap:.5,minZoom:9,maxZoom:17}).setView([41.93,3.03],1
 map.attributionControl.setPrefix(false).addAttribution("Límits: es-atlas (INE) · Horaris: Generalitat de Catalunya");
 /* fons com el mapa dels llamps: municipis de la demarcació, sense tessel·les */
 map.createPane("fons").style.zIndex=250;
-const NOSTRES=["17022","17057","17902","17901"];
+const NOSTRES=["17022","17057","17902","17901","17205"];
 const ETIQ=["la Bisbal d'Empordà","Girona","Palafrugell","Palamós","Sant Feliu de Guíxols","Torroella de Montgrí","Begur","Pals","Corçà","Forallac","Cruïlles, Monells i Sant Sadurní de l'Heura","Calonge i Sant Antoni","Castell-Platja d'Aro","Llagostera","Cassà de la Selva","Celrà","Verges","l'Escala","Ullastret","Torrent","Santa Cristina d'Aro","Flaçà","Mont-ras"];
 fetch("https://latdg.github.io/tauler/llamps/girona.json").then(r=>r.json()).then(G=>{
  const prov=topojson.feature(G,G.objects.provincies), mun=topojson.feature(G,G.objects.municipis);
