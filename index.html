@@ -132,7 +132,7 @@ const FRANGES=[[8,9],[15,16],[18,19]];
 const LAYERS=[
  {id:"ly-bus",label:"Busos de línia",sub:"Posició segons horari",layer:busLayer,sw:'<span class="sw dot"></span>',on:true},
  {id:"ly-lin",label:"Traçats de les línies",sub:"D'una parada a la següent",layer:lineLayer,sw:'<span class="sw"></span>',on:true},
- {id:"ly-par",label:"Parades",sub:"Amb zoom",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
+ {id:"ly-par",label:"Parades",sub:"Toca-les per veure quins busos hi passen",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
  {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3 (només amb reserva)",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true}];
 const lyEl=document.getElementById("layers");
 LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l.htmlFor=o.id;
@@ -140,10 +140,27 @@ LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l
  lyEl.appendChild(l); if(o.on&&o.id!=="ly-par") o.layer.addTo(map);
  l.querySelector("input").addEventListener("change",e=>{o.checked=e.target.checked; if(o.id==="ly-par") return parades(); e.target.checked?o.layer.addTo(map):map.removeLayer(o.layer);});
  o.checked=o.on;});
-function parades(){const on=LAYERS[2].checked&&map.getZoom()>=12; on?stopLayer.addTo(map):map.removeLayer(stopLayer);}
+function parades(){const on=LAYERS[2].checked&&map.getZoom()>=11; on?stopLayer.addTo(map):map.removeLayer(stopLayer);}
 map.on("zoomend",parades);
 
 let D=null;
+/* Nom de la parada amb el poble, si el nom no el porta ja */
+const nomP=sid=>{const p=D.parades[sid]; if(!p) return ""; return p.m&&!p.n.toLowerCase().includes(p.m.toLowerCase())?`${p.n} (${p.m})`:p.n;};
+const origen=v=>v.o||D.parades[v.s[0][0]].m||D.parades[v.s[0][0]].n;
+const desti=v=>{const d=v.d||D.parades[v.s[v.s.length-1][0]].m||D.parades[v.s[v.s.length-1][0]].n; return d===origen(v)?`${d} (circular)`:d;};
+const final=v=>v.td!=null?v.td:v.s[v.s.length-1][1];
+/* Properes sortides d'una parada (quan hi toques) */
+function sortidesParada(sid){
+ const d=new Date(), m=d.getHours()*60+d.getMinutes(), out=[];
+ (D.dies[avuiClau(d)]||[]).forEach(v=>v.s.forEach(([x,t],k)=>{ if(x!==sid||t<m-1) return;
+   if(k===v.s.length-1&&Math.abs(t-final(v))<1) return;   // aquí acaba: no se'l pot agafar
+   out.push({v,t}); }));
+ out.sort((a,b)=>a.t-b.t);
+ const p=D.parades[sid];
+ return `<div class="pop"><h3>${p.n}</h3>${p.m?`<div class="m" style="margin-bottom:6px">${p.m}</div>`:""}`+
+  (out.length?out.slice(0,6).map(x=>`<div style="display:flex;gap:6px;align-items:baseline;margin:3px 0"><span class="code" style="background:${color(x.v.r)};min-width:38px;font-size:11px">${D.rutes[x.v.r].c}</span><span style="flex:1">cap a ${desti(x.v)}</span><b>${fmt(x.t)}</b></div>`).join(""):"Avui ja no hi passa cap bus més.")+
+  `<div class="m">Hores segons l'horari${out.some(x=>D.rutes[x.v.r].dem)?" · el Clic només passa amb reserva":""}</div></div>`;
+}
 const color=rid=>D.rutes[rid].dem?"#7a3fa0":(D.rutes[rid].col||PALETA[Object.keys(D.rutes).filter(k=>!D.rutes[k].dem).indexOf(rid)%PALETA.length]);
 
 function dibuixa(){
@@ -151,7 +168,7 @@ function dibuixa(){
   if(r.dem){ L.polyline(r.t,{color:"#7a3fa0",weight:2.5,dashArray:"6 5"}).bindTooltip(`<b>Clic ${r.c}</b> ${r.n}`,{sticky:true}).addTo(clicLayer); return; }
   L.polyline(r.t,{color:"#fff",weight:7,interactive:false}).addTo(lineLayer);
   L.polyline(r.t,{color:color(rid),weight:3.5,opacity:.85}).bindTooltip(`<b>${r.c}</b> ${r.n}${r.op?" · "+r.op:""}`,{sticky:true}).addTo(lineLayer);});
- Object.values(D.parades).forEach(p=>L.circleMarker(p.ll,{radius:3,color:"#fff",weight:1,fillColor:"#59626c",fillOpacity:1}).bindTooltip(p.n).addTo(stopLayer));
+ Object.entries(D.parades).forEach(([sid,p])=>L.circleMarker(p.ll,{radius:4,color:"#fff",weight:1.5,fillColor:"#59626c",fillOpacity:1}).bindTooltip(nomP(sid)).bindPopup(()=>sortidesParada(sid)).addTo(stopLayer));
  parades();
 }
 
@@ -166,21 +183,21 @@ function tick(){
  const viatges=D.dies[avuiClau(d)]||[];
  busLayer.clearLayers(); const ara=[], nx=[];
  viatges.forEach(v=>{ const s=v.s, r=D.rutes[v.r]; if(!r) return;
-  const dest=v.h||D.parades[s[s.length-1][0]].n;
+  const dest=desti(v), orig=origen(v), fi=final(v), falten=Math.max(0,Math.round(fi-m));
   if(m>=s[0][1]&&m<=s[s.length-1][1]){
    let i=1; while(i<s.length-1&&s[i][1]<m) i++;
    const a=D.parades[s[i-1][0]].ll, b=D.parades[s[i][0]].ll, dt=(s[i][1]-s[i-1][1])||1, f=Math.min(1,Math.max(0,(m-s[i-1][1])/dt));
    const ll=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
    L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus${r.dem?" dem":""}" style="background:${color(v.r)}">${r.c}</div>`,iconSize:null,iconAnchor:[15,9]})})
-    .bindPopup(`<div class="pop"><h3>${r.c} cap a ${dest}</h3>Pròxima parada: ${D.parades[s[i][0]].n} (${fmt(s[i][1])} h)<br>Arribada a ${dest}: ${fmt(s[s.length-1][1])} h · falten ${Math.max(0,Math.round(s[s.length-1][1]-m))} min<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
-   ara.push({v,r,dest,next:D.parades[s[i][0]].n,arr:s[s.length-1][1],falten:Math.max(0,Math.round(s[s.length-1][1]-m))});
+    .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
+   ara.push({v,r,dest,orig,next:nomP(s[i][0]),arr:fi,falten});
   }
-  s.forEach(([sid,t],k)=>{ if(k<s.length-1&&/bisbal/i.test(D.parades[sid].n)&&t>=m&&t<m+180) nx.push({v,r,dest,t,n:D.parades[sid].n}); });
+  s.forEach(([sid,t],k)=>{ if(D.parades[sid].m==="la Bisbal d'Empordà"&&!/bisbal/i.test(dest)&&t>=m&&t<m+180) nx.push({v,r,dest,t,n:D.parades[sid].n}); });
  });
  ara.sort((a,b)=>a.arr-b.arr); nx.sort((a,b)=>a.t-b.t);
- document.getElementById("now").innerHTML=ara.length?ara.map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">Cap a ${x.dest}<small>${x.r.dem?"Clic, a demanda · ":""}Pròxima: ${x.next}</small></span><span class="t">${fmt(x.arr)}<small style="display:block;color:var(--muted);font:12px var(--f-body);text-align:right">${x.falten} min</small></span></div>`).join(""):`<div class="empty">Ara no hi ha cap bus en ruta segons l'horari.</div>`;
+ document.getElementById("now").innerHTML=ara.length?ara.map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">${x.orig} → ${x.dest}<small>${x.r.dem?"Clic, a demanda · ":""}Pròxima: ${x.next}</small></span><span class="t">${fmt(x.arr)}<small style="display:block;color:var(--muted);font:12px var(--f-body);text-align:right">${x.falten} min</small></span></div>`).join(""):`<div class="empty">Ara no hi ha cap bus en ruta segons l'horari.</div>`;
  const vist=new Set();
- document.getElementById("next").innerHTML=nx.filter(x=>{const k=x.r.c+x.t;if(vist.has(k))return false;vist.add(k);return true;}).slice(0,8).map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">${x.dest}<small>${x.n}</small></span><span class="t">${fmt(x.t)}</span></div>`).join("")||`<div class="empty">Cap sortida en les pròximes tres hores.</div>`;
+ document.getElementById("next").innerHTML=nx.filter(x=>{const k=x.r.c+x.t;if(vist.has(k))return false;vist.add(k);return true;}).slice(0,8).map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">Cap a ${x.dest}<small>${x.n}</small></span><span class="t">${fmt(x.t)}</span></div>`).join("")||`<div class="empty">Cap sortida en les pròximes tres hores.</div>`;
 }
 
 /* capes de La TdG (llegides del tauler) */

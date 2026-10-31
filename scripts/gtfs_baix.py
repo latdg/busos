@@ -25,6 +25,10 @@ DIES = 2  # avui i demà
 
 SORTIDA = os.path.join(os.path.dirname(__file__), "..", "data", "busos.json")
 
+# Municipis (el mateix fitxer que fa servir el mapa dels llamps del tauler)
+MUNICIPIS_URL = os.environ.get("MUNICIPIS_URL",
+                               "https://raw.githubusercontent.com/latdg/tauler/main/llamps/girona.json")
+
 
 def dins(lat, lon, b):
     return b["lat_min"] <= lat <= b["lat_max"] and b["lon_min"] <= lon <= b["lon_max"]
@@ -75,15 +79,87 @@ def serveis_actius(z, dia):
     return actius
 
 
+def article(nom):
+    """«La Bisbal d'Empordà» -> «la Bisbal d'Empordà», «L'Escala» -> «l'Escala»."""
+    return re.sub(r"^(La|El|Els|Les|L')(?=[ ']|\b)", lambda m: m.group(1).lower(), nom)
+
+
+def carrega_municipis():
+    """Polígons dels municipis de la demarcació de Girona (TopoJSON) per saber de quin poble és cada parada."""
+    try:
+        if os.path.exists(MUNICIPIS_URL):
+            with open(MUNICIPIS_URL, encoding="utf-8") as f:
+                topo = json.load(f)
+        else:
+            req = urllib.request.Request(MUNICIPIS_URL, headers={"User-Agent": "latdg-busos/1.0"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                topo = json.loads(r.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print("Sense municipis:", e)
+        return []
+    tr = topo.get("transform")
+    arcs = []
+    for arc in topo["arcs"]:
+        x = y = 0
+        punts = []
+        for p in arc:
+            if tr:
+                x, y = x + p[0], y + p[1]
+                punts.append((x * tr["scale"][0] + tr["translate"][0], y * tr["scale"][1] + tr["translate"][1]))
+            else:
+                punts.append((p[0], p[1]))
+        arcs.append(punts)
+
+    def anell(idx):
+        pts = []
+        for i in idx:
+            a = arcs[i] if i >= 0 else arcs[~i][::-1]
+            pts.extend(a if not pts else a[1:])
+        return pts
+
+    sortida = []
+    for g in topo["objects"]["municipis"]["geometries"]:
+        polis = g["arcs"] if g["type"] == "MultiPolygon" else [g["arcs"]] if g["type"] == "Polygon" else []
+        anells = [anell(r) for poli in polis for r in poli]
+        if not anells:
+            continue
+        xs = [p[0] for a in anells for p in a]
+        ys = [p[1] for a in anells for p in a]
+        sortida.append({"n": article(g.get("properties", {}).get("n", "")), "caixa": (min(xs), min(ys), max(xs), max(ys)),
+                        "anells": anells})
+    return sortida
+
+
+def municipi(muns, lat, lon):
+    for m in muns:
+        x0, y0, x1, y1 = m["caixa"]
+        if not (x0 <= lon <= x1 and y0 <= lat <= y1):
+            continue
+        dins_ = False
+        for a in m["anells"]:            # parell-senar: els forats també compten bé
+            j = len(a) - 1
+            for i in range(len(a)):
+                xi, yi = a[i]
+                xj, yj = a[j]
+                if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+                    dins_ = not dins_
+                j = i
+        if dins_:
+            return m["n"]
+    return ""
+
+
 def processa(data):
     z = zipfile.ZipFile(io.BytesIO(data))
+    muns = carrega_municipis()
 
-    parades = {}
+    parades, totes = {}, {}
     for s in llegeix(z, "stops.txt"):
         try:
             lat, lon = float(s["stop_lat"]), float(s["stop_lon"])
         except (ValueError, KeyError):
             continue
+        totes[s["stop_id"]] = (s.get("stop_name", "").strip(), lat, lon)
         if dins(lat, lon, BBOX):
             parades[s["stop_id"]] = {"n": s.get("stop_name", "").strip(), "ll": [round(lat, 5), round(lon, 5)],
                                      "c": dins(lat, lon, COMARCA)}
@@ -94,11 +170,21 @@ def processa(data):
 
     # stop_times agrupats per viatge, només parades del requadre
     horaris = {}
+    extrems = {}   # trip -> [seq, parada, hora] de la primera i de l'última parada de TOT el viatge
     for st in llegeix(z, "stop_times.txt"):
-        if st["stop_id"] not in parades:
-            continue
         t = st.get("departure_time") or st.get("arrival_time")
         if not t:
+            continue
+        seq = int(st["stop_sequence"])
+        e = extrems.get(st["trip_id"])
+        if e is None:
+            extrems[st["trip_id"]] = [[seq, st["stop_id"], t], [seq, st["stop_id"], t]]
+        else:
+            if seq < e[0][0]:
+                e[0] = [seq, st["stop_id"], t]
+            if seq > e[1][0]:
+                e[1] = [seq, st["stop_id"], t]
+        if st["stop_id"] not in parades:
             continue
         horaris.setdefault(st["trip_id"], []).append((int(st["stop_sequence"]), st["stop_id"], round(a_min(t), 2)))
 
@@ -108,6 +194,15 @@ def processa(data):
         llista.sort()
         if sum(1 for _, sid, _ in llista if parades[sid]["c"]) >= 2:
             bons[tid] = llista
+
+    cache_lloc = {}
+
+    def lloc(sid):
+        """Nom del poble de la parada (o el nom de la parada si és fora de la demarcació)."""
+        if sid not in cache_lloc:
+            n, la, lo = totes.get(sid, ("", 0, 0))
+            cache_lloc[sid] = municipi(muns, la, lo) or n
+        return cache_lloc[sid]
 
     avui = datetime.now(TZ).date()
     dies = {}
@@ -122,7 +217,11 @@ def processa(data):
                 continue
             rutes_usades.add(t["route_id"])
             parades_usades.update(sid for _, sid, _ in ll)
+            e = extrems.get(tid)
             llista_dia.append({"r": t["route_id"], "h": t.get("trip_headsign", "").strip(),
+                               "o": lloc(e[0][1]) if e else "", "d": lloc(e[1][1]) if e else "",
+                               "to": round(a_min(e[0][2]), 2) if e else None,
+                               "td": round(a_min(e[1][2]), 2) if e else None,
                                "s": [[sid, m] for _, sid, m in ll]})
         llista_dia.sort(key=lambda v: v["s"][0][1])
         dies[dia.strftime("%d.%m.%Y")] = llista_dia
@@ -161,7 +260,8 @@ def processa(data):
     return {
         "generat": datetime.now(TZ).strftime("%d.%m.%Y %H.%M"),
         "font": "Generalitat de Catalunya · xarxa d'autobusos interurbans (GTFS)",
-        "parades": {sid: {"n": parades[sid]["n"], "ll": parades[sid]["ll"]} for sid in sorted(parades_usades)},
+        "parades": {sid: {"n": parades[sid]["n"], "m": lloc(sid), "ll": parades[sid]["ll"]}
+                    for sid in sorted(parades_usades)},
         "rutes": sortida_rutes,
         "dies": dies,
     }
