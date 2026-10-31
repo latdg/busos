@@ -1,0 +1,11 @@
+{
+  "_nota": "Codi de línia del mapa -> on és l'horari. «pagina»: pàgina fixa de la línia a la web de Moventis (l'Action hi busca el PDF vigent). «pdf»: PDF fix. «linia»: com en diu l'operador.",
+  "1556": {"linia": "42 (horari conjunt 5, 41 i 42)", "pagina": "https://www.moventis.es/ca/linies-horaris/linia-autobus-42-girona-la-bisbal-palafrugell-p-aro-girona"},
+  "1461": {"linia": "41 (horari conjunt 5, 41 i 42)", "pagina": "https://www.moventis.es/ca/linies-horaris/linia-autobus-42-girona-la-bisbal-palafrugell-p-aro-girona"},
+  "331":  {"linia": "5 (horari conjunt 5, 41 i 42)", "pagina": "https://www.moventis.es/ca/linies-horaris/linia-autobus-42-girona-la-bisbal-palafrugell-p-aro-girona"},
+  "1570": {"linia": "17", "pagina": "https://www.moventis.es/ca/linies-horaris/linia-autobus-17-palafrugell-la-bisbal-figueres"},
+  "1725": {"linia": "10", "pagina": "https://www.moventis.es/es/lineas-horarios/linea-autobus-10-torroella-m-lescala-figueres"},
+  "R1":   {"linia": "Clic.cat R1", "pdf": "https://mou-te.gencat.cat/prowcr/content/Clic_BaixEmporda.pdf"},
+  "R2":   {"linia": "Clic.cat R2", "pdf": "https://mou-te.gencat.cat/prowcr/content/Clic_BaixEmporda.pdf"},
+  "R3":   {"linia": "Clic.cat R3", "pdf": "https://mou-te.gencat.cat/prowcr/content/Clic_BaixEmporda.pdf"}
+}

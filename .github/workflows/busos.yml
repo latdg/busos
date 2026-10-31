@@ -28,11 +28,15 @@ jobs:
           GTFS_URL: ${{ vars.GTFS_URL }}
         run: python scripts/gtfs_baix.py
 
+      - name: Busca el PDF d'horaris vigent de cada línia (Moventis)
+        continue-on-error: true
+        run: python scripts/horaris_pdf.py
+
       - name: Desa les dades si han canviat
         run: |
           git config user.name "latdg-busos"
           git config user.email "latdg-busos@users.noreply.github.com"
-          git add data/busos.json
+          git add data/
           if git diff --cached --quiet; then
             echo "Sense canvis"
           else

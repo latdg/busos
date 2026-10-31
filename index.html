@@ -52,6 +52,13 @@ h2{font:700 13px var(--f-display);letter-spacing:.09em;text-transform:uppercase;
 .pop h3{font:700 16px var(--f-display);margin:0 0 4px}
 .pop .m{color:var(--muted);font-size:12px}
 .err{color:#b3261e}
+summary{cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary h2::after{content:" ▸";letter-spacing:0}
+details[open] summary h2::after{content:" ▾"}
+.pdf{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#fff;background:#b3261e;border-radius:4px;padding:3px 8px;text-decoration:none}
+.pdf:hover{background:#8c1d17}
+.row .pdf{margin-top:0}
 .grp{font:700 11px var(--f-display);letter-spacing:.1em;text-transform:uppercase;margin:12px 0 2px;padding-bottom:3px;border-bottom:1px solid var(--rule)}
 .alerts{display:flex;flex-direction:column;gap:8px}
 .alert{display:grid;grid-template-columns:6px 1fr;gap:10px;font-size:13px;line-height:1.35}
@@ -83,6 +90,11 @@ h2{font:700 13px var(--f-display);letter-spacing:.09em;text-transform:uppercase;
     <section>
       <h2>A la carretera ara</h2>
       <div class="list" id="now"><div class="empty">Carregant…</div></div>
+    </section>
+    <section>
+      <details id="linies-box"><summary><h2 style="display:inline">Línies i horaris</h2></summary>
+        <div class="list" id="linies" style="margin-top:8px"></div>
+      </details>
     </section>
     <section>
       <h2>Clic.cat a demanda</h2>
@@ -143,7 +155,15 @@ LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l
 function parades(){const on=LAYERS[2].checked&&map.getZoom()>=11; on?stopLayer.addTo(map):map.removeLayer(stopLayer);}
 map.on("zoomend",parades);
 
-let D=null;
+let D=null, H={};
+/* Enllaç al PDF d'horaris de la línia, si en tenim */
+const pdf=rid=>{const h=H[D.rutes[rid].c]; return h&&h.pdf?`<a class="pdf" href="${h.pdf}" target="_blank" rel="noopener">Horari en PDF${h.linia?" · línia "+h.linia:""}</a>`:"";};
+function llistaLinies(){
+ const files=Object.entries(D.rutes).sort((a,b)=>(a[1].dem-b[1].dem)||a[1].c.localeCompare(b[1].c,"ca",{numeric:true})).map(([rid,r])=>{
+  const h=H[r.c]; const enll=h&&h.pdf?`<a class="pdf" href="${h.pdf}" target="_blank" rel="noopener">PDF</a>`:`<small style="color:var(--muted)">sense PDF</small>`;
+  return `<div class="row"><span class="code" style="background:${color(rid)}">${r.c}</span><span class="what">${r.n}<small>${r.op||""}${h&&h.linia?" · línia "+h.linia:""}</small></span>${enll}</div>`;});
+ document.getElementById("linies").innerHTML=files.join("");
+}
 /* Nom de la parada amb el poble, si el nom no el porta ja */
 const nomP=sid=>{const p=D.parades[sid]; if(!p) return ""; return p.m&&!p.n.toLowerCase().includes(p.m.toLowerCase())?`${p.n} (${p.m})`:p.n;};
 const origen=v=>v.o||D.parades[v.s[0][0]].m||D.parades[v.s[0][0]].n;
@@ -189,7 +209,7 @@ function tick(){
    const a=D.parades[s[i-1][0]].ll, b=D.parades[s[i][0]].ll, dt=(s[i][1]-s[i-1][1])||1, f=Math.min(1,Math.max(0,(m-s[i-1][1])/dt));
    const ll=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
    L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus${r.dem?" dem":""}" style="background:${color(v.r)}">${r.c}</div>`,iconSize:null,iconAnchor:[15,9]})})
-    .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
+    .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min${pdf(v.r)}<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
    ara.push({v,r,dest,orig,next:nomP(s[i][0]),arr:fi,falten});
   }
   s.forEach(([sid,t],k)=>{ if(D.parades[sid].m==="la Bisbal d'Empordà"&&!/bisbal/i.test(dest)&&t>=m&&t<m+180) nx.push({v,r,dest,t,n:D.parades[sid].n}); });
@@ -213,7 +233,8 @@ function afegeixCapes(llista){
 CapesTdG.carrega().then(D=>afegeixCapes(CapesTdG.pinta(map,D)));
 
 fetch("data/busos.json",{cache:"no-cache"}).then(r=>{if(!r.ok) throw new Error(r.status);return r.json();})
- .then(j=>{D=j; dibuixa(); tick();
+ .then(j=>{D=j; dibuixa(); tick(); llistaLinies();
+   fetch("data/horaris.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{}).then(h=>{H=h||{}; llistaLinies();}).catch(()=>{});
    document.getElementById("note").insertAdjacentHTML("beforeend",` Dades actualitzades el ${j.generat} h.`);})
  .catch(()=>{document.getElementById("now").innerHTML=`<div class="empty err">No s'han pogut carregar els horaris. Torna-ho a provar d'aquí a una estona.</div>`;});
 tick(); setInterval(tick,15000);
