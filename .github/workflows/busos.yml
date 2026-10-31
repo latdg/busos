@@ -1,0 +1,41 @@
+name: Horaris dels busos
+
+on:
+  schedule:
+    - cron: "47 3 * * *"   # cada dia cap a les 4.47 / 5.47 (hora de Madrid)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: busos
+  cancel-in-progress: false
+
+jobs:
+  horaris:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Baixa el GTFS i genera data/busos.json
+        env:
+          GTFS_URL: ${{ vars.GTFS_URL }}
+        run: python scripts/gtfs_baix.py
+
+      - name: Desa les dades si han canviat
+        run: |
+          git config user.name "latdg-busos"
+          git config user.email "latdg-busos@users.noreply.github.com"
+          git add data/busos.json
+          if git diff --cached --quiet; then
+            echo "Sense canvis"
+          else
+            git commit -m "Horaris del $(TZ=Europe/Madrid date +%d.%m.%Y)"
+            git push
+          fi
