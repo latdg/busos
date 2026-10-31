@@ -7,6 +7,9 @@
     viu: TAULER + "dades/viu.json",
     dea: TAULER + "dades/dea.json",
     antenes: TAULER + "dades/antenes.json",
+    // Registre del dia del vigilant d'aeronaus: tot el que ha passat a menys de 40 km
+    aeronaus: (() => { const d = new Date(), p = n => String(n).padStart(2, "0");
+      return `https://raw.githubusercontent.com/latdg/vigilant-aeronaus/dades/registre/${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.json`; })(),
   };
 
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -63,10 +66,11 @@
         .bindPopup(pop("Balisa V16", `${esc(b.via)}${b.pk ? ", pk " + esc(b.pk) : ""}<br>${esc(b.municipi)} · ${esc(b.inici)}`, esc(b.orientacio))).addTo(C.v16); });
     n.v16 = (v.v16?.balises || []).length;
 
-    (v.aeronaus || []).forEach(a => { if (!ok(a.lat, a.lon)) return;
+    const aeros = (Array.isArray(D.aeronaus) ? D.aeronaus : []).filter(a => a.clau !== "comercial" && ok(a.lat, a.lon));
+    aeros.forEach(a => {
       L.marker([a.lat, a.lon], { icon: avio(a) })
-        .bindPopup(pop(`${EMOJI_AERO[String(a.categoria || "").toUpperCase()] || "✈️"} ${a.categoria || "Aeronau"}`, `${esc(a.hora)} h · ${esc(a.matricula)} ${esc(a.model)}<br>${esc(a.ubicacio)}<br>${a.altitud ? a.altitud + " m" : ""}${a.velocitat ? " · " + a.velocitat + " km/h" : ""}`, "Vigilant d'aeronaus · avui")).addTo(C.aero); });
-    n.aero = (v.aeronaus || []).length;
+        .bindPopup(pop(`${EMOJI_AERO[String(a.categoria || "").toUpperCase()] || "✈️"} ${a.categoria || "Aeronau"}`, `${esc(a.hora)} h${a.matricula ? " · " + esc(a.matricula) : ""}${a.model ? " · " + esc(a.model) : ""}<br>${esc(a.ubicacio)}<br>${a.altitud ? a.altitud + " m" : ""}${a.velocitat ? " · " + a.velocitat + " km/h" : ""}${a.distancia != null ? `<br>A ${coma(a.distancia)} km de la Bisbal` : ""}`, "Vigilant d'aeronaus · punt més proper a la Bisbal")).addTo(C.aero); });
+    n.aero = aeros.length;
 
 
     (v.terratremols?.llista || []).forEach(t => { if (!ok(t.lat, t.lon)) return;
@@ -105,7 +109,7 @@
     return [
       { g: "Mobilitat" },
       { id: "ly-v16", label: "Balises V16", sub: q("v16"), layer: C.v16, sw: D2("#e65100"), on: true },
-      { id: "ly-aero", label: "Aeronaus", sub: n.aero ? `${n.aero} avui` : "Cap avui", layer: C.aero, sw: `<span style="justify-self:center;font-size:15px;line-height:1">✈️</span>`, on: true },
+      { id: "ly-aero", label: "Aeronaus", sub: n.aero ? `${n.aero} avui, a menys de 40 km` : "Cap avui", layer: C.aero, sw: `<span style="justify-self:center;font-size:15px;line-height:1">✈️</span>`, on: true },
       { g: "Territori" },
       { id: "ly-terra", label: "Terratrèmols", sub: `${n.terra} en 30 dies`, layer: C.terra, sw: D2("#5e35b1"), on: false },
       { g: "Emergències i talls" },
