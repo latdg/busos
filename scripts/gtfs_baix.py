@@ -4,7 +4,7 @@ les línies que passen pel Baix Empordà. Genera data/busos.json per al mapa.
 Ús:  python scripts/gtfs_baix.py               (baixa el GTFS)
      python scripts/gtfs_baix.py fitxer.zip    (fa servir un zip local)
 """
-import csv, io, json, os, sys, zipfile, urllib.request
+import csv, io, json, os, re, sys, zipfile, urllib.request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -141,8 +141,17 @@ def processa(data):
     for rid in sorted(rutes_usades):
         r = rutes.get(rid, {})
         color = (r.get("route_color") or "").strip()
+        llarg = (r.get("route_long_name") or "").strip()
+        curt = (r.get("route_short_name") or "").strip() or rid
+        # codis llegibles: R1-R3 del Clic, E2/E3 dels exprés; la resta, el número sense «L0»
+        m = re.match(r"\s*\(?(R\d)\s+Clic", llarg, re.I) or re.search(r"Expres\.cat\s+(E\d+)", llarg, re.I)
+        if m:
+            codi = m.group(1).upper()
+        else:
+            codi = re.sub(r"^L0*", "", curt) or curt
         sortida_rutes[rid] = {
-            "c": (r.get("route_short_name") or "").strip() or rid,
+            "c": codi,
+            "dem": bool(re.search(r"clic\.cat", llarg, re.I)),
             "n": (r.get("route_long_name") or "").strip(),
             "op": agencies.get(r.get("agency_id", ""), "") or next(iter(agencies.values()), ""),
             "col": "#" + color if len(color) == 6 else "",

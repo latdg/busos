@@ -44,6 +44,7 @@ h2{font:700 13px var(--f-display);letter-spacing:.09em;text-transform:uppercase;
 .pill.off{color:var(--muted);border-color:var(--rule);background:#f7f8f9}
 .empty{color:var(--muted);font-size:13px;padding:8px 0}
 .note{font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--rule);padding-top:12px;margin:0}
+.bus.dem{border-style:dashed}
 .bus{display:flex;align-items:center;justify-content:center;min-width:30px;height:18px;padding:0 4px;border-radius:9px;color:#fff;font:700 11px var(--f-display);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);white-space:nowrap}
 .leaflet-popup-content{font:13px/1.4 var(--f-body)}
 .pop h3{font:700 16px var(--f-display);margin:0 0 4px}
@@ -100,7 +101,7 @@ h2{font:700 13px var(--f-display);letter-spacing:.09em;text-transform:uppercase;
       <h2>Farmàcia de guàrdia</h2>
       <div class="list" id="farma"><div class="empty">Carregant…</div></div>
     </section>
-    <p class="note" id="note">Horaris i parades del GTFS de la Generalitat. La posició de cada bus es calcula amb l'horari; no és la posició real. Les rutes del Clic surten del full oficial del servei, que funciona a demanda i amb reserva. La resta de capes i avisos es llegeixen del tauler de La TdG, sense cap consulta nova a les fonts.</p>
+    <p class="note" id="note">Horaris i parades del GTFS de la Generalitat. La posició de cada bus es calcula amb l'horari; no és la posició real. El Clic també surt al GTFS, però és a demanda: només circula si algú ha fet la reserva. La resta de capes i avisos es llegeixen del tauler de La TdG, sense cap consulta nova a les fonts.</p>
   </aside>
 </div>
 <script>
@@ -108,7 +109,7 @@ h2{font:700 13px var(--f-display);letter-spacing:.09em;text-transform:uppercase;
 const pad=n=>String(n).padStart(2,"0");
 const fmt=m=>{m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+"."+pad(Math.floor(m%60));};
 const avuiClau=d=>`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
-const PALETA=["#1d5fae","#2f8f6f","#b5651d","#8c4a7a","#3b4f8c","#c0392b","#00838f","#6d4c41"];
+const PALETA=["#1d5fae","#2f8f6f","#b5651d","#8c4a7a","#3b4f8c","#c0392b","#00838f","#6d4c41","#5f7f1f","#b03a6e","#2c6e8f","#8a6d1c"];
 
 const map=L.map("map",{zoomSnap:.5,minZoom:9,maxZoom:17}).setView([41.93,3.03],10.5);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
@@ -117,19 +118,17 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
 const lineLayer=L.layerGroup(), stopLayer=L.layerGroup(), busLayer=L.layerGroup(), clicLayer=L.layerGroup();
 
 /* ---- Clic.cat (full oficial) ---- */
-const PC={"la Bisbal d'Empordà":[41.958,3.038],"Vulpellac":[41.950,3.050],"Canapost":[41.973,3.072],"Ullastret":[42.000,3.068],"Peratallada":[41.978,3.090],"Palau-sator":[41.987,3.108],"Fontclara":[41.973,3.120],"Sant Julià de Boada":[41.995,3.112],"Sant Feliu de Boada":[41.990,3.124],"Torrent":[41.951,3.128],"Fonteta":[41.938,3.063],"Corçà":[41.988,3.008],"Púbol":[42.016,2.988],"la Pera":[42.022,2.978],"Riuràs":[42.044,3.006],"Foixà":[42.036,3.000],"la Sala":[42.030,3.015],"Ultramort":[42.039,3.034],"Parlavà":[42.020,3.027],"Casavells":[41.986,3.040],"Cruïlles":[41.952,3.009],"Sant Sadurní de l'Heura":[41.931,2.985],"Monells":[41.975,2.995],"Polígon de Corçà":[41.975,3.020]};
 const CLIC=[
  {code:"R1",name:"la Bisbal d'Empordà – Fonteta",stops:["la Bisbal d'Empordà","Vulpellac","Canapost","Ullastret","Peratallada","Palau-sator","Fontclara","Sant Julià de Boada","Sant Feliu de Boada","Torrent","Fonteta","la Bisbal d'Empordà"]},
  {code:"R2",name:"la Bisbal d'Empordà – Casavells",stops:["la Bisbal d'Empordà","Corçà","Púbol","la Pera","Riuràs","Foixà","la Sala","Ultramort","Parlavà","Casavells","Corçà","la Bisbal d'Empordà"]},
  {code:"R3",name:"la Bisbal d'Empordà – Polígon de Corçà",note:"per Cruïlles, Monells i Sant Sadurní de l'Heura",stops:["la Bisbal d'Empordà","Cruïlles","Sant Sadurní de l'Heura","Monells","Corçà","Polígon de Corçà","la Bisbal d'Empordà"]}];
 const FRANGES=[[8,9],[15,16],[18,19]];
-CLIC.forEach(r=>L.polyline(r.stops.map(s=>PC[s]),{color:"#7a3fa0",weight:2.5,dashArray:"6 5"}).bindTooltip(`<b>Clic ${r.code}</b> ${r.name}`,{sticky:true}).addTo(clicLayer));
 
 const LAYERS=[
  {id:"ly-bus",label:"Busos de línia",sub:"Posició segons horari",layer:busLayer,sw:'<span class="sw dot"></span>',on:true},
  {id:"ly-lin",label:"Traçats de les línies",sub:"D'una parada a la següent",layer:lineLayer,sw:'<span class="sw"></span>',on:true},
  {id:"ly-par",label:"Parades",sub:"Amb zoom",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
- {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true}];
+ {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3 (només amb reserva)",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true}];
 const lyEl=document.getElementById("layers");
 LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l.htmlFor=o.id;
  l.innerHTML=`<input type="checkbox" id="${o.id}" ${o.on?"checked":""}>${o.sw}<span>${o.label}<small>${o.sub}</small></span>`;
@@ -140,10 +139,11 @@ function parades(){const on=LAYERS[2].checked&&map.getZoom()>=12; on?stopLayer.a
 map.on("zoomend",parades);
 
 let D=null;
-const color=rid=>D.rutes[rid].col||PALETA[Object.keys(D.rutes).indexOf(rid)%PALETA.length];
+const color=rid=>D.rutes[rid].dem?"#7a3fa0":(D.rutes[rid].col||PALETA[Object.keys(D.rutes).filter(k=>!D.rutes[k].dem).indexOf(rid)%PALETA.length]);
 
 function dibuixa(){
  Object.entries(D.rutes).forEach(([rid,r])=>{ if(r.t.length<2) return;
+  if(r.dem){ L.polyline(r.t,{color:"#7a3fa0",weight:2.5,dashArray:"6 5"}).bindTooltip(`<b>Clic ${r.c}</b> ${r.n}`,{sticky:true}).addTo(clicLayer); return; }
   L.polyline(r.t,{color:"#fff",weight:7,interactive:false}).addTo(lineLayer);
   L.polyline(r.t,{color:color(rid),weight:3.5,opacity:.85}).bindTooltip(`<b>${r.c}</b> ${r.n}${r.op?" · "+r.op:""}`,{sticky:true}).addTo(lineLayer);});
  Object.values(D.parades).forEach(p=>L.circleMarker(p.ll,{radius:3,color:"#fff",weight:1,fillColor:"#59626c",fillOpacity:1}).bindTooltip(p.n).addTo(stopLayer));
@@ -166,14 +166,14 @@ function tick(){
    let i=1; while(i<s.length-1&&s[i][1]<m) i++;
    const a=D.parades[s[i-1][0]].ll, b=D.parades[s[i][0]].ll, dt=(s[i][1]-s[i-1][1])||1, f=Math.min(1,Math.max(0,(m-s[i-1][1])/dt));
    const ll=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
-   L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus" style="background:${color(v.r)}">${r.c}</div>`,iconSize:null,iconAnchor:[15,9]})})
-    .bindPopup(`<div class="pop"><h3>${r.c} cap a ${dest}</h3>Pròxima parada: ${D.parades[s[i][0]].n} (${fmt(s[i][1])} h)<br>Arribada: ${fmt(s[s.length-1][1])} h<div class="m">${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
+   L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus${r.dem?" dem":""}" style="background:${color(v.r)}">${r.c}</div>`,iconSize:null,iconAnchor:[15,9]})})
+    .bindPopup(`<div class="pop"><h3>${r.c} cap a ${dest}</h3>Pròxima parada: ${D.parades[s[i][0]].n} (${fmt(s[i][1])} h)<br>Arribada: ${fmt(s[s.length-1][1])} h<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
    ara.push({v,r,dest,next:D.parades[s[i][0]].n,arr:s[s.length-1][1]});
   }
   s.forEach(([sid,t],k)=>{ if(k<s.length-1&&/bisbal/i.test(D.parades[sid].n)&&t>=m&&t<m+180) nx.push({v,r,dest,t,n:D.parades[sid].n}); });
  });
  ara.sort((a,b)=>a.arr-b.arr); nx.sort((a,b)=>a.t-b.t);
- document.getElementById("now").innerHTML=ara.length?ara.map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">Cap a ${x.dest}<small>Pròxima: ${x.next}</small></span><span class="t">${fmt(x.arr)}</span></div>`).join(""):`<div class="empty">Ara no hi ha cap bus en ruta segons l'horari.</div>`;
+ document.getElementById("now").innerHTML=ara.length?ara.map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">Cap a ${x.dest}<small>${x.r.dem?"Clic, a demanda · ":""}Pròxima: ${x.next}</small></span><span class="t">${fmt(x.arr)}</span></div>`).join(""):`<div class="empty">Ara no hi ha cap bus en ruta segons l'horari.</div>`;
  const vist=new Set();
  document.getElementById("next").innerHTML=nx.filter(x=>{const k=x.r.c+x.t;if(vist.has(k))return false;vist.add(k);return true;}).slice(0,8).map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">${x.dest}<small>${x.n}</small></span><span class="t">${fmt(x.t)}</span></div>`).join("")||`<div class="empty">Cap sortida en les pròximes tres hores.</div>`;
 }
