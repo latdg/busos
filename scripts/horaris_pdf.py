@@ -31,6 +31,8 @@ def main():
     sortida = {}
     for codi, f in fonts.items():
         entrada = {"linia": f.get("linia", ""), "pagina": f.get("pagina", "")}
+        if f.get("num"):
+            entrada["num"] = f["num"]
         if f.get("pdf"):
             entrada["pdf"] = f["pdf"]
         elif f.get("pagina"):
