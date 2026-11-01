@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<script src="capes.js"></script>
 <style>
 :root{
   --paper:#fff; --ink:#1b2430; --muted:#6b7480; --rule:#e3e6ea; --clic:#7a3fa0; --ok:#2e7d32;
@@ -59,16 +58,12 @@ details[open] summary h2::after{content:" ▾"}
 .pdf{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#fff;background:#b3261e;border-radius:4px;padding:3px 8px;text-decoration:none}
 .pdf:hover{background:#8c1d17}
 .row .pdf{margin-top:0}
-.grp{font:700 11px var(--f-display);letter-spacing:.1em;text-transform:uppercase;margin:12px 0 2px;padding-bottom:3px;border-bottom:1px solid var(--rule)}
-.alerts{display:flex;flex-direction:column;gap:8px}
-.alert{display:grid;grid-template-columns:6px 1fr;gap:10px;font-size:13px;line-height:1.35}
-.alert i{border-radius:3px}
-.alert small{display:block;color:var(--muted);font-size:12px}
-.row1{padding:7px 0;border-bottom:1px solid var(--rule);font-size:13px}
-.row1 small{display:block;color:var(--muted);font-size:12px}
-.ic{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;border-radius:10px;color:#fff;font:700 10px var(--f-display);letter-spacing:.02em;border:1.5px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.3);white-space:nowrap}
-.ic.sq{border-radius:3px}
-.emo{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid #c9ccd1;box-shadow:0 1px 3px rgba(0,0,0,.25);font-size:15px;line-height:1}
+.bt{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#fff;background:#1b2430;border-radius:4px;padding:3px 8px;text-decoration:none}
+.bt:hover{background:#000}
+.acc{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.acc .pdf,.acc .bt{margin-top:0}
+.pop .acc{justify-content:flex-start;margin-top:6px}
+.sw.ter{width:14px;height:14px;border-radius:50%;background:#d0021b;border:2px solid #fff;box-shadow:0 0 0 1px #d0021b;justify-self:center}
 @media (max-width:760px){
   .app{grid-template-columns:1fr;grid-template-rows:62vh auto;height:auto}
   #map{border-right:0;border-bottom:1px solid var(--rule)}
@@ -85,14 +80,14 @@ details[open] summary h2::after{content:" ▾"}
     </div>
     <section>
       <h2>Capes</h2>
-      <div id="layers"><div class="grp">Busos</div></div>
+      <div id="layers"></div>
     </section>
     <section>
       <h2>A la carretera ara</h2>
       <div class="list" id="now"><div class="empty">Carregant…</div></div>
     </section>
     <section>
-      <details id="linies-box"><summary><h2 style="display:inline">Línies i horaris</h2></summary>
+      <details id="linies-box" open><summary><h2 style="display:inline">Línies, horaris en PDF i bitllets</h2></summary>
         <div class="list" id="linies" style="margin-top:8px"></div>
       </details>
     </section>
@@ -104,7 +99,7 @@ details[open] summary h2::after{content:" ▾"}
       <h2>Properes sortides des de la Bisbal</h2>
       <div class="list" id="next"></div>
     </section>
-    <p class="note" id="note">Horaris i parades del GTFS de la Generalitat. La posició de cada bus es calcula amb l'horari; no és la posició real. El Clic també surt al GTFS, però és a demanda: només circula si algú ha fet la reserva. La resta de capes es llegeixen del tauler de La TdG, sense cap consulta nova a les fonts.</p>
+    <p class="note" id="note">Horaris i parades del GTFS de la Generalitat. La posició de cada bus es calcula amb l'horari; no és la posició real. El Clic també surt al GTFS, però és a demanda: només circula si algú ha fet la reserva.</p>
   </aside>
 </div>
 <script>
@@ -132,7 +127,7 @@ fetch("https://latdg.github.io/tauler/llamps/girona.json").then(r=>r.json()).the
  const mostra=()=>map.getZoom()>=10?etiq.addTo(map):map.removeLayer(etiq); mostra(); map.on("zoomend",mostra);
 }).catch(()=>{});
 
-const lineLayer=L.layerGroup(), stopLayer=L.layerGroup(), busLayer=L.layerGroup(), clicLayer=L.layerGroup();
+const lineLayer=L.layerGroup(), stopLayer=L.layerGroup(), busLayer=L.layerGroup(), clicLayer=L.layerGroup(), terLayer=L.layerGroup();
 
 /* ---- Clic.cat (full oficial) ---- */
 const CLIC=[
@@ -145,7 +140,8 @@ const LAYERS=[
  {id:"ly-bus",label:"Busos de línia",sub:"Posició segons horari",layer:busLayer,sw:'<span class="sw dot"></span>',on:true},
  {id:"ly-lin",label:"Traçats de les línies",sub:"D'una parada a la següent",layer:lineLayer,sw:'<span class="sw"></span>',on:true},
  {id:"ly-par",label:"Parades",sub:"Toca-les per veure quins busos hi passen",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
- {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3 (només amb reserva)",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true}];
+ {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3 (només amb reserva)",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true},
+ {id:"ly-ter",label:"Inici i final dels trajectes",sub:"Rodona vermella a cada capçalera",layer:terLayer,sw:'<span class="sw ter"></span>',on:true}];
 const lyEl=document.getElementById("layers");
 LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l.htmlFor=o.id;
  l.innerHTML=`<input type="checkbox" id="${o.id}" ${o.on?"checked":""}>${o.sw}<span>${o.label}<small>${o.sub}</small></span>`;
@@ -158,11 +154,21 @@ map.on("zoomend",parades);
 let D=null, H={};
 /* Enllaç al PDF d'horaris de la línia, si en tenim */
 const pdf=rid=>{const h=H[D.rutes[rid].c]; return h&&h.pdf?`<a class="pdf" href="${h.pdf}" target="_blank" rel="noopener">Horari en PDF${h.linia?" · línia "+h.linia:""}</a>`:"";};
+/* On es compra el bitllet (o es reserva el Clic), segons l'empresa */
+const CLIC_RES="Reserva amb l'app Clic.cat o al 670 788 888 (feiners, de 7 a 20 h), com a mínim 30 min abans";
+const bitllet=rid=>{const r=D.rutes[rid], op=(r.op||"").toUpperCase();
+ if(r.dem) return null;
+ if(op.includes("SARFA")) return {url:"https://compras.moventis.es/online/",txt:"Compra el bitllet",qui:"Moventis"};
+ if(op.includes("TEISA")) return {url:"https://www.teisa-bus.com/ca/index.html",txt:"Compra el bitllet",qui:"TEISA"};
+ return null;};
+const btBitllet=(rid,curt)=>{const b=bitllet(rid); return b?`<a class="bt" href="${b.url}" target="_blank" rel="noopener" title="Web de ${b.qui}">${curt?"Bitllet":b.txt+" ("+b.qui+")"}</a>`:"";};
+const accions=rid=>{const a=pdf(rid)+btBitllet(rid); return a?`<div class="acc">${a}</div>`:(D.rutes[rid].dem?`<div class="m" style="margin-top:6px">${CLIC_RES}.</div>`:"");};
 function llistaLinies(){
  const files=Object.entries(D.rutes).sort((a,b)=>(a[1].dem-b[1].dem)||a[1].c.localeCompare(b[1].c,"ca",{numeric:true})).map(([rid,r])=>{
-  const h=H[r.c]; const enll=h&&h.pdf?`<a class="pdf" href="${h.pdf}" target="_blank" rel="noopener">PDF</a>`:`<small style="color:var(--muted)">sense PDF</small>`;
+  const h=H[r.c]; const p=h&&h.pdf?`<a class="pdf" href="${h.pdf}" target="_blank" rel="noopener">PDF</a>`:"";
+  const enll=(p||btBitllet(rid,true))?`<span class="acc">${p}${btBitllet(rid,true)}</span>`:`<small style="color:var(--muted)">${r.dem?"amb reserva":"sense venda en línia"}</small>`;
   return `<div class="row"><span class="code" style="background:${color(rid)}">${r.c}</span><span class="what">${r.n}<small>${r.op||""}${h&&h.linia?" · línia "+h.linia:""}</small></span>${enll}</div>`;});
- document.getElementById("linies").innerHTML=files.join("");
+ document.getElementById("linies").innerHTML=files.join("")+`<div class="empty">PDF: horari oficial de l'empresa, quan el publica. Bitllet: web de compra de l'empresa (Moventis o TEISA). Clic.cat: ${CLIC_RES}.</div>`;
 }
 /* Nom de la parada amb el poble, si el nom no el porta ja */
 const nomP=sid=>{const p=D.parades[sid]; if(!p) return ""; return p.m&&!p.n.toLowerCase().includes(p.m.toLowerCase())?`${p.n} (${p.m})`:p.n;};
@@ -185,9 +191,18 @@ const color=rid=>D.rutes[rid].dem?"#7a3fa0":(D.rutes[rid].col||PALETA[Object.key
 
 function dibuixa(){
  Object.entries(D.rutes).forEach(([rid,r])=>{ if(r.t.length<2) return;
-  if(r.dem){ L.polyline(r.t,{color:"#7a3fa0",weight:2.5,dashArray:"6 5"}).bindTooltip(`<b>Clic ${r.c}</b> ${r.n}`,{sticky:true}).addTo(clicLayer); return; }
+  const pop=`<div class="pop"><h3>${r.dem?"Clic ":"Línia "}${r.c}</h3>${r.n}<div class="m">${r.op||""}</div>${accions(rid)}</div>`;
+  if(r.dem){ L.polyline(r.t,{color:"#7a3fa0",weight:2.5,dashArray:"6 5"}).bindTooltip(`<b>Clic ${r.c}</b> ${r.n}`,{sticky:true}).bindPopup(pop).addTo(clicLayer); return; }
   L.polyline(r.t,{color:"#fff",weight:7,interactive:false}).addTo(lineLayer);
-  L.polyline(r.t,{color:color(rid),weight:3.5,opacity:.85}).bindTooltip(`<b>${r.c}</b> ${r.n}${r.op?" · "+r.op:""}`,{sticky:true}).addTo(lineLayer);});
+  L.polyline(r.t,{color:color(rid),weight:3.5,opacity:.85}).bindTooltip(`<b>${r.c}</b> ${r.n}${r.op?" · "+r.op:""}`,{sticky:true}).bindPopup(pop).addTo(lineLayer);});
+ /* capçaleres: on comença i acaba cada trajecte (rodona vermella) */
+ const cap={};
+ Object.values(D.dies).forEach(vs=>vs.forEach(v=>{ if(!D.rutes[v.r]) return;
+  [[v.s[0][0],"ini"],[v.s[v.s.length-1][0],"fi"]].forEach(([sid,k])=>{ const c=cap[sid]=cap[sid]||{ini:new Set(),fi:new Set()}; c[k].add(v.r); }); }));
+ const cods=set=>[...set].map(rid=>D.rutes[rid].c).sort((a,b)=>a.localeCompare(b,"ca",{numeric:true})).join(", ");
+ Object.entries(cap).forEach(([sid,c])=>{ const p=D.parades[sid]; if(!p) return;
+  const t=`<b>${nomP(sid)}</b>${c.ini.size?`<br>Inici: ${cods(c.ini)}`:""}${c.fi.size?`<br>Final: ${cods(c.fi)}`:""}`;
+  L.circleMarker(p.ll,{radius:7,color:"#fff",weight:2,fillColor:"#d0021b",fillOpacity:1}).bindTooltip(t).bindPopup(()=>sortidesParada(sid)).addTo(terLayer); });
  Object.entries(D.parades).forEach(([sid,p])=>L.circleMarker(p.ll,{radius:4,color:"#fff",weight:1.5,fillColor:"#59626c",fillOpacity:1}).bindTooltip(nomP(sid)).bindPopup(()=>sortidesParada(sid)).addTo(stopLayer));
  parades();
 }
@@ -198,7 +213,7 @@ function tick(){
  /* Clic */
  const h=d.getHours()+d.getMinutes()/60, fr=FRANGES.find(([a,b])=>h>=a&&h<b), nf=FRANGES.find(([a])=>a>h);
  const st=fr?`<span class="pill on">En servei fins a les ${fr[1]}.00</span>`:`<span class="pill off">${nf?"Torna a les "+nf[0]+".00":"Demà a les 8.00"}</span>`;
- document.getElementById("clic").innerHTML=CLIC.map(r=>`<div class="row"><span class="code" style="background:#7a3fa0">${r.code}</span><span class="what">${r.name}${r.note?`<small>${r.note}</small>`:""}</span>${st}</div>`).join("")+`<div class="empty">De 8 a 9, de 15 a 16 i de 18 a 19 h, amb reserva prèvia.</div>`;
+ document.getElementById("clic").innerHTML=CLIC.map(r=>`<div class="row"><span class="code" style="background:#7a3fa0">${r.code}</span><span class="what">${r.name}${r.note?`<small>${r.note}</small>`:""}</span>${st}</div>`).join("")+`<div class="empty">De 8 a 9, de 15 a 16 i de 18 a 19 h, amb reserva prèvia. ${CLIC_RES}. Bitllet senzill, 1,90 €.<br><a class="pdf" href="https://mou-te.gencat.cat/prowcr/content/Clic_BaixEmporda.pdf" target="_blank" rel="noopener">Full del Clic en PDF</a></div>`;
  if(!D) return;
  const viatges=D.dies[avuiClau(d)]||[];
  busLayer.clearLayers(); const ara=[], nx=[];
@@ -209,7 +224,7 @@ function tick(){
    const a=D.parades[s[i-1][0]].ll, b=D.parades[s[i][0]].ll, dt=(s[i][1]-s[i-1][1])||1, f=Math.min(1,Math.max(0,(m-s[i-1][1])/dt));
    const ll=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
    L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus${r.dem?" dem":""}" style="background:${color(v.r)}">${r.c}</div>`,iconSize:null,iconAnchor:[15,9]})})
-    .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min${pdf(v.r)}<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
+    .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min${accions(v.r)}<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
    ara.push({v,r,dest,orig,next:nomP(s[i][0]),arr:fi,falten});
   }
   s.forEach(([sid,t],k)=>{ if(D.parades[sid].m==="la Bisbal d'Empordà"&&!/bisbal/i.test(dest)&&t>=m&&t<m+180) nx.push({v,r,dest,t,n:D.parades[sid].n}); });
@@ -219,18 +234,6 @@ function tick(){
  const vist=new Set();
  document.getElementById("next").innerHTML=nx.filter(x=>{const k=x.r.c+x.t;if(vist.has(k))return false;vist.add(k);return true;}).slice(0,8).map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">Cap a ${x.dest}<small>${x.n}</small></span><span class="t">${fmt(x.t)}</span></div>`).join("")||`<div class="empty">Cap sortida en les pròximes tres hores.</div>`;
 }
-
-/* capes de La TdG (llegides del tauler) */
-function afegeixCapes(llista){
- llista.forEach(o=>{
-  if(o.g){const h=document.createElement("div");h.className="grp";h.textContent=o.g;lyEl.appendChild(h);return;}
-  const l=document.createElement("label");l.className="layer";l.htmlFor=o.id;
-  l.innerHTML=`<input type="checkbox" id="${o.id}" ${o.on?"checked":""}>${o.sw}<span>${o.label}<small>${o.sub}</small></span>`;
-  lyEl.appendChild(l); if(o.on) o.layer.addTo(map);
-  l.querySelector("input").addEventListener("change",e=>{e.target.checked?o.layer.addTo(map):map.removeLayer(o.layer);});
- });
-}
-CapesTdG.carrega().then(D=>afegeixCapes(CapesTdG.pinta(map,D)));
 
 fetch("data/busos.json",{cache:"no-cache"}).then(r=>{if(!r.ok) throw new Error(r.status);return r.json();})
  .then(j=>{D=j; dibuixa(); tick(); llistaLinies();
