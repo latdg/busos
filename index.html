@@ -212,7 +212,8 @@ function tick(){
  document.getElementById("clock").textContent=`${avuiClau(d)} · ${pad(d.getHours())}.${pad(d.getMinutes())} h`;
  /* Clic */
  const h=d.getHours()+d.getMinutes()/60, fr=FRANGES.find(([a,b])=>h>=a&&h<b), nf=FRANGES.find(([a])=>a>h);
- const st=fr?`<span class="pill on">En servei fins a les ${fr[1]}.00</span>`:`<span class="pill off">${nf?"Torna a les "+nf[0]+".00":"Demà a les 8.00"}</span>`;
+ const clicAvui=!D||(D.dies[avuiClau(d)]||[]).some(v=>D.rutes[v.r]&&D.rutes[v.r].dem);   // festius: no surt a l'horari
+ const st=!clicAvui?`<span class="pill off">Avui no circula</span>`:fr?`<span class="pill on">En servei fins a les ${fr[1]}.00</span>`:`<span class="pill off">${nf?"Torna a les "+nf[0]+".00":"Avui ja no"}</span>`;
  document.getElementById("clic").innerHTML=CLIC.map(r=>`<div class="row"><span class="code" style="background:#7a3fa0">${r.code}</span><span class="what">${r.name}${r.note?`<small>${r.note}</small>`:""}</span>${st}</div>`).join("")+`<div class="empty">De 8 a 9, de 15 a 16 i de 18 a 19 h, amb reserva prèvia. ${CLIC_RES}. Bitllet senzill, 1,90 €.<br><a class="pdf" href="https://mou-te.gencat.cat/prowcr/content/Clic_BaixEmporda.pdf" target="_blank" rel="noopener">Full del Clic en PDF</a></div>`;
  if(!D) return;
  const viatges=D.dies[avuiClau(d)]||[];
