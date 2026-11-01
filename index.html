@@ -143,7 +143,7 @@ const FRANGES=[[8,9],[15,16],[18,19]];
 const LAYERS=[
  {id:"ly-bus",label:"Busos de línia",sub:"Posició segons horari",layer:busLayer,sw:'<span class="sw dot"></span>',on:true},
  {id:"ly-lin",label:"Traçats de les línies",sub:"D'una parada a la següent",layer:lineLayer,sw:'<span class="sw"></span>',on:true},
- {id:"ly-par",label:"Parades",sub:"Toca-les per veure quins busos hi passen",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
+ {id:"ly-par",label:"Parades",sub:"Toca-les per veure quins busos hi passen (més grosses amb zoom)",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
  {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3 (només amb reserva)",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true},
  {id:"ly-ter",label:"Inici i final dels trajectes",sub:"Rodona vermella a cada capçalera",layer:terLayer,sw:'<span class="sw ter"></span>',on:true}];
 const lyEl=document.getElementById("layers");
@@ -152,7 +152,10 @@ LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l
  lyEl.appendChild(l); if(o.on&&o.id!=="ly-par") o.layer.addTo(map);
  l.querySelector("input").addEventListener("change",e=>{o.checked=e.target.checked; if(o.id==="ly-par") return parades(); e.target.checked?o.layer.addTo(map):map.removeLayer(o.layer);});
  o.checked=o.on;});
-function parades(){const on=LAYERS[2].checked&&map.getZoom()>=11; on?stopLayer.addTo(map):map.removeLayer(stopLayer);}
+/* 01.11.2026: les parades surten sempre que la capa és activa (abans, només amb zoom 11 o més); de lluny, més petites */
+function parades(){ if(!LAYERS[2].checked) return map.removeLayer(stopLayer);
+ const z=map.getZoom(), r=z>=12?4.5:z>=11?3.5:2.5;
+ stopLayer.eachLayer(c=>{c.setRadius(r);c.setStyle({weight:r>3?1.5:1});}); stopLayer.addTo(map);}
 map.on("zoomend",parades);
 
 let D=null, H={};
