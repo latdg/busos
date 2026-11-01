@@ -55,11 +55,12 @@ summary{cursor:pointer;list-style:none}
 summary::-webkit-details-marker{display:none}
 summary h2::after{content:" ▸";letter-spacing:0}
 details[open] summary h2::after{content:" ▾"}
-.pdf{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#fff;background:#b3261e;border-radius:4px;padding:3px 8px;text-decoration:none}
-.pdf:hover{background:#8c1d17}
+/* 01.11.2026: botons en taronja suau i blanc, amb el text fosc (abans, vermell i blau) */
+.pdf,.leaflet-container a.pdf{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#7a3a00;background:#fde6cf;border:1px solid #f2b47e;border-radius:4px;padding:3px 8px;text-decoration:none}
+.pdf:hover,.leaflet-container a.pdf:hover{background:#fbd5b0;color:#7a3a00}
 .row .pdf{margin-top:0}
-.bt{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#fff;background:#1b2430;border-radius:4px;padding:3px 8px;text-decoration:none}
-.bt:hover{background:#000}
+.bt,.leaflet-container a.bt{display:inline-block;margin-top:6px;font:600 12px var(--f-body);color:#1b2430;background:#fff;border:1px solid #9aa3ad;border-radius:4px;padding:3px 8px;text-decoration:none}
+.bt:hover,.leaflet-container a.bt:hover{background:#f1f3f5;color:#1b2430}
 .acc{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 .acc .pdf,.acc .bt{margin-top:0}
 .pop .acc{justify-content:flex-start;margin-top:6px}
@@ -238,7 +239,7 @@ function tick(){
 
 fetch("data/busos.json",{cache:"no-cache"}).then(r=>{if(!r.ok) throw new Error(r.status);return r.json();})
  .then(j=>{D=j; dibuixa(); tick(); llistaLinies();
-   fetch("data/horaris.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{}).then(h=>{H=h||{}; llistaLinies();}).catch(()=>{});
+   fetch("data/horaris.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{}).then(h=>{H=h||{}; llistaLinies(); tick();}).catch(()=>{});
    document.getElementById("note").insertAdjacentHTML("beforeend",` Dades actualitzades el ${j.generat} h.`);})
  .catch(()=>{document.getElementById("now").innerHTML=`<div class="empty err">No s'han pogut carregar els horaris. Torna-ho a provar d'aquí a una estona.</div>`;});
 tick(); setInterval(tick,15000);
