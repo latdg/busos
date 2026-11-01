@@ -32,6 +32,18 @@ jobs:
         continue-on-error: true
         run: python scripts/horaris_pdf.py
 
+      # 01.11.2026: còpia pròpia del díptic del Clic.cat (setembre 2025), que a la web
+      # oficial no es troba. Només es baixa si encara no hi és; per canviar-lo, esborra
+      # data/clic-baix-emporda.pdf i posa la nova adreça aquí.
+      - name: Còpia del díptic del Clic.cat
+        continue-on-error: true
+        run: |
+          if [ ! -s data/clic-baix-emporda.pdf ]; then
+            curl -fsSL -A "Mozilla/5.0 (latdg-busos)" -o data/clic-baix-emporda.pdf \
+              "https://palau-sator.cat/media/sites/161/Diptic-informatiu-setembre-2025.pdf" \
+              && head -c 5 data/clic-baix-emporda.pdf | grep -q "%PDF" || rm -f data/clic-baix-emporda.pdf
+          fi
+
       - name: Desa les dades si han canviat
         run: |
           git config user.name "latdg-busos"
