@@ -19,6 +19,16 @@
   "pagina": "https://www.moventis.es/ca/linies-horaris/linia-autobus-17-palafrugell-la-bisbal-figueres",
   "pdf": "https://www.moventis.es/sites/moventis/files/line/files/17_figueres-palafrugell_092026-062027_0.pdf"
  },
+ "1122": {
+  "linia": "8",
+  "pagina": "https://www.moventis.es/es/lineas-horarios/linea-autobus-8-palafrugell-begur-girona",
+  "pdf": "https://www.moventis.es/sites/moventis/files/line/files/8_palafrugell-begur_tot_any_3.pdf"
+ },
+ "1152": {
+  "linia": "22",
+  "pagina": "https://www.moventis.es/es/lineas-horarios/linea-autobus-22-palafrugell-peratallada-la-bisbal",
+  "pdf": "https://www.moventis.es/sites/moventis/files/line/files/22_la_bisbal-pals-palafrugell_tot_any_1.pdf"
+ },
  "1725": {
   "linia": "10",
   "pagina": "https://www.moventis.es/es/lineas-horarios/linea-autobus-10-torroella-m-lescala-figueres",
