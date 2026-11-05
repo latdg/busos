@@ -4,7 +4,7 @@ les línies que passen pel Baix Empordà. Genera data/busos.json per al mapa.
 Ús:  python scripts/gtfs_baix.py               (baixa el GTFS)
      python scripts/gtfs_baix.py fitxer.zip    (fa servir un zip local)
 """
-import csv, io, json, os, re, sys, zipfile, urllib.request
+import csv, io, json, math, os, re, sys, time, zipfile, urllib.request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -24,6 +24,12 @@ COMARCA = dict(lat_min=41.76, lat_max=42.12, lon_min=2.89, lon_max=3.25)
 DIES = 2  # avui i demà
 
 SORTIDA = os.path.join(os.path.dirname(__file__), "..", "data", "busos.json")
+
+# 05.11.2026: traçat per la carretera. Cada tram entre dues parades seguides es desa a
+# data/trams.json («parada>parada»: [[lat, lon], …]). Surt del shapes.txt del GTFS si en porta;
+# si no, d'OSRM (carreteres d'OpenStreetMap). Els trams ja calculats no es tornen a demanar.
+TRAMS = os.path.join(os.path.dirname(__file__), "..", "data", "trams.json")
+OSRM = os.environ.get("OSRM_URL", "https://router.project-osrm.org").rstrip("/")
 
 # Municipis (el mateix fitxer que fa servir el mapa dels llamps del tauler)
 MUNICIPIS_URL = os.environ.get("MUNICIPIS_URL",
@@ -149,6 +155,144 @@ def municipi(muns, lat, lon):
     return ""
 
 
+def dist(a, b):
+    """Metres entre dos punts [lat, lon]."""
+    la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371000 * math.asin(math.sqrt(h))
+
+
+def simplifica(pts, tol=8.0):
+    """Douglas-Peucker (tolerància en metres, aproximada); conserva el primer i l'últim punt."""
+    if len(pts) < 3:
+        return pts
+    k = math.cos(math.radians(pts[0][0]))
+
+    def xy(p):
+        return (p[1] * 111320 * k, p[0] * 110540)
+
+    P = [xy(p) for p in pts]
+    keep = [False] * len(pts)
+    keep[0] = keep[-1] = True
+    pila = [(0, len(pts) - 1)]
+    while pila:
+        i, j = pila.pop()
+        (x1, y1), (x2, y2) = P[i], P[j]
+        dx, dy = x2 - x1, y2 - y1
+        L2 = dx * dx + dy * dy
+        best, bi = 0.0, -1
+        for m in range(i + 1, j):
+            x, y = P[m]
+            if L2 == 0:
+                d = math.hypot(x - x1, y - y1)
+            else:
+                t = max(0, min(1, ((x - x1) * dx + (y - y1) * dy) / L2))
+                d = math.hypot(x - (x1 + t * dx), y - (y1 + t * dy))
+            if d > best:
+                best, bi = d, m
+        if best > tol:
+            keep[bi] = True
+            pila += [(i, bi), (bi, j)]
+    return [p for p, k_ in zip(pts, keep) if k_]
+
+
+def arrodoneix(pts):
+    return [[round(p[0], 5), round(p[1], 5)] for p in pts]
+
+
+def raonable(tram, a, b):
+    """Descarta trams estranys (voltes enormes): si és més de 3 vegades la recta + 1,5 km, recta."""
+    llarg = sum(dist(tram[i], tram[i + 1]) for i in range(len(tram) - 1))
+    return llarg <= 3 * dist(a, b) + 1500
+
+
+def trams_shapes(z, viatges, bons, totes, falten):
+    """Talla el shapes.txt del GTFS (si n'hi ha) en trams entre parades seguides."""
+    shapes = {}
+    for p in llegeix(z, "shapes.txt"):
+        try:
+            shapes.setdefault(p["shape_id"], []).append(
+                (int(p["shape_pt_sequence"]), float(p["shape_pt_lat"]), float(p["shape_pt_lon"])))
+        except (ValueError, KeyError):
+            continue
+    if not shapes:
+        print("El GTFS no porta shapes.txt: els trams nous es demanen a OSRM")
+        return {}
+    for v in shapes.values():
+        v.sort()
+    print(f"shapes.txt: {len(shapes)} traçats")
+    nous = {}
+    for tid, ll in bons.items():
+        sh = shapes.get((viatges.get(tid) or {}).get("shape_id", ""))
+        sids = [sid for _, sid, _ in ll]
+        claus = [f"{a}>{b}" for a, b in zip(sids, sids[1:])]
+        if not sh or not any(k in falten and k not in nous for k in claus):
+            continue
+        pts = [[la, lo] for _, la, lo in sh]
+        idx, cur = [], 0
+        for sid in sids:            # cada parada, al punt més proper del traçat, sempre endavant
+            p = totes[sid][1:]
+            best, bi = None, cur
+            for i in range(cur, len(pts)):
+                d = dist(p, pts[i])
+                if best is None or d < best:
+                    best, bi = d, i
+                elif d > best + 2000:   # ja ens n'allunyem: el mínim local és aquest
+                    break
+            idx.append(bi if best is not None and best < 300 else None)
+            if best is not None and best < 300:
+                cur = bi
+        for k, (a, b) in enumerate(zip(sids, sids[1:])):
+            i, j = idx[k], idx[k + 1]
+            if i is None or j is None or j <= i:
+                continue
+            tram = [list(totes[a][1:])] + pts[i:j + 1] + [list(totes[b][1:])]
+            if raonable(tram, totes[a][1:], totes[b][1:]):
+                nous[f"{a}>{b}"] = arrodoneix(simplifica(tram))
+    return nous
+
+
+def trams_osrm(seqs, totes, falten):
+    """Demana a OSRM el recorregut per carretera de cada seqüència de parades a la qual falti algun tram."""
+    nous, demanades, errors = {}, 0, 0
+    for sids in seqs:
+        claus = [f"{a}>{b}" for a, b in zip(sids, sids[1:])]
+        if not any(k in falten and k not in nous for k in claus):
+            continue
+        if errors >= 5:
+            print("OSRM falla massa: la resta de trams queden en línia recta fins a la propera vegada")
+            break
+        coords = ";".join(f"{totes[s][2]:.6f},{totes[s][1]:.6f}" for s in sids)
+        url = f"{OSRM}/route/v1/driving/{coords}?overview=false&steps=true&geometries=geojson"
+        try:
+            time.sleep(1.1)   # política del servidor públic: com a molt una petició per segon
+            req = urllib.request.Request(url, headers={"User-Agent": "latdg-busos/1.0 (github.com/latdg/busos)"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                res = json.loads(r.read().decode("utf-8"))
+            demanades += 1
+            legs = res["routes"][0]["legs"] if res.get("code") == "Ok" else []
+        except Exception as e:  # noqa: BLE001
+            errors += 1
+            print("  OSRM error:", e)
+            continue
+        for k, leg in enumerate(legs):
+            a, b = sids[k], sids[k + 1]
+            pts = []
+            for st in leg.get("steps", []):
+                for lo, la in st.get("geometry", {}).get("coordinates", []):
+                    if not pts or pts[-1] != [la, lo]:
+                        pts.append([la, lo])
+            if len(pts) < 2:
+                continue
+            tram = [list(totes[a][1:])] + pts + [list(totes[b][1:])]
+            if raonable(tram, totes[a][1:], totes[b][1:]):
+                nous[f"{a}>{b}"] = arrodoneix(simplifica(tram))
+            else:
+                nous[f"{a}>{b}"] = arrodoneix([totes[a][1:], totes[b][1:]])
+    print(f"OSRM: {demanades} peticions, {len(nous)} trams nous")
+    return nous
+
+
 def processa(data):
     z = zipfile.ZipFile(io.BytesIO(data))
     muns = carrega_municipis()
@@ -236,6 +380,39 @@ def processa(data):
         if len(seq) > len(tracats.get(t["route_id"], [])):
             tracats[t["route_id"]] = seq
 
+    # 05.11.2026: trams per la carretera entre parades seguides (shapes.txt o OSRM, amb memòria)
+    seqs = {}
+    for vs in dies.values():
+        for v in vs:
+            sids = tuple(sid for sid, _ in v["s"])
+            seqs.setdefault(sids, None)
+    for rid, seq in tracats.items():
+        seqs.setdefault(tuple(seq), None)
+    usats = {f"{a}>{b}" for sids in seqs for a, b in zip(sids, sids[1:])}
+    try:
+        with open(TRAMS, encoding="utf-8") as f:
+            memoria = json.load(f).get("trams", {})
+    except Exception:  # noqa: BLE001
+        memoria = {}
+    trams = {k: v for k, v in memoria.items() if k in usats}
+    falten = usats - set(trams)
+    print(f"Trams: {len(usats)} en ús, {len(trams)} ja calculats, {len(falten)} per calcular")
+    if falten:
+        trams.update(trams_shapes(z, viatges, bons, totes, falten))
+        falten = usats - set(trams)
+    if falten:
+        trams.update(trams_osrm(sorted(seqs, key=len, reverse=True), totes, falten))
+    pendents = len(usats - set(trams))
+    if pendents:
+        print(f"{pendents} trams queden en línia recta")
+
+    def recorregut(seq):
+        pts = []
+        for a, b in zip(seq, seq[1:]):
+            t = trams.get(f"{a}>{b}") or [parades[a]["ll"], parades[b]["ll"]]
+            pts.extend(t if not pts else t[1:])
+        return pts or [parades[s]["ll"] for s in seq]
+
     sortida_rutes = {}
     for rid in sorted(rutes_usades):
         r = rutes.get(rid, {})
@@ -254,7 +431,7 @@ def processa(data):
             "n": (r.get("route_long_name") or "").strip(),
             "op": agencies.get(r.get("agency_id", ""), "") or next(iter(agencies.values()), ""),
             "col": "#" + color if len(color) == 6 else "",
-            "t": [parades[s]["ll"] for s in tracats.get(rid, [])],
+            "t": recorregut(tracats.get(rid, [])),   # per la carretera (abans, de parada a parada)
         }
 
     return {
@@ -264,6 +441,7 @@ def processa(data):
                     for sid in sorted(parades_usades)},
         "rutes": sortida_rutes,
         "dies": dies,
+        "_trams": trams,
     }
 
 
@@ -274,7 +452,11 @@ def main():
     else:
         data = baixa()
     res = processa(data)
+    trams = res.pop("_trams", {})
     os.makedirs(os.path.dirname(SORTIDA), exist_ok=True)
+    with open(TRAMS, "w", encoding="utf-8") as f:
+        json.dump({"font": "shapes.txt del GTFS o OSRM (© col·laboradors d'OpenStreetMap)",
+                   "trams": dict(sorted(trams.items()))}, f, ensure_ascii=False, separators=(",", ":"))
     with open(SORTIDA, "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, separators=(",", ":"))
     n = {k: len(v) for k, v in res["dies"].items()}

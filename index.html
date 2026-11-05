@@ -69,6 +69,25 @@ details[open] summary h2::after{content:" ▾"}
 .acc .pdf,.acc .bt{margin-top:0}
 .pop .acc{justify-content:flex-start;margin-top:6px}
 .sw.ter{width:14px;height:14px;border-radius:50%;background:#d0021b;border:2px solid #fff;box-shadow:0 0 0 1px #d0021b;justify-self:center}
+/* 05.11.2026: filtre per línia, zones i punts de venda de l'ATM */
+.filtre{display:flex;gap:6px;align-items:center;margin-top:10px}
+.filtre select{flex:1;min-width:0;font:14px var(--f-body);color:var(--ink);background:#fff;border:1px solid #9aa3ad;border-radius:6px;padding:5px 8px}
+.filtre button{font:600 12px var(--f-body);color:#7a3a00;background:#fde6cf;border:1px solid #f2b47e;border-radius:4px;padding:5px 8px;cursor:pointer}
+.filtre button[hidden]{display:none}
+#linies .code{cursor:pointer}
+.sw.zona{width:14px;height:14px;border-radius:3px;justify-self:center;border:1px solid rgba(0,0,0,.25)}
+.sw.vd,.venda{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#0f6e6e;color:#fff;font:700 11px var(--f-display);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.sw.vd{justify-self:center;width:16px;height:16px;font-size:10px}
+.etiq-zona{background:none;border:0;box-shadow:none;color:#3a3a36;font:700 12px var(--f-display);letter-spacing:.05em;text-transform:uppercase;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
+.etiq-zona::before{display:none}
+.tarifes{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;margin:6px 0}
+.tarifes th,.tarifes td{padding:5px 4px;border-bottom:1px solid var(--rule);text-align:right}
+.tarifes th:first-child,.tarifes td:first-child{text-align:left}
+.tarifes th{font:700 12px var(--f-display);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.txt{font-size:13px;line-height:1.5;margin:0 0 8px}
+.zones-ll{display:grid;grid-template-columns:22px 1fr;gap:4px 8px;align-items:center;font-size:13px;margin:6px 0 8px}
+.venda-ll .row{grid-template-columns:24px 1fr;cursor:pointer}
+.venda-ll .row:hover{background:#f5f7f9}
 @media (max-width:760px){
   .app{grid-template-columns:1fr;grid-template-rows:62vh auto;height:auto}
   #map{border-right:0;border-bottom:1px solid var(--rule)}
@@ -85,6 +104,7 @@ details[open] summary h2::after{content:" ▾"}
       <a class="torna" href="https://latdg.github.io/tauler/#busos">← Torna a La TdG ampliada</a>
       <h1>Busos del Baix Empordà</h1>
       <div class="sub"><span class="clock" id="clock">–</span> · posició segons horari, no GPS</div>
+      <div class="filtre"><select id="filtre" aria-label="Línia que es mostra"><option value="">Totes les línies</option></select><button type="button" id="filtre-tots" hidden>Totes</button></div>
     </div>
     <section>
       <h2>Capes</h2>
@@ -103,6 +123,27 @@ details[open] summary h2::after{content:" ▾"}
       <h2>Clic.cat a demanda</h2>
       <div class="list" id="clic"></div>
     </section>
+    <section id="atm">
+      <details open><summary><h2 style="display:inline">Bitllets i targetes de l'ATM</h2></summary>
+        <div style="margin-top:8px">
+          <p class="txt">Des del 02.03.2026 els busos interurbans del Baix Empordà són dins de l'ATM de Girona. Hi ha dues maneres de pagar:</p>
+          <p class="txt"><b>Bitllet senzill</b>: a bord o a la web de l'empresa (Moventis o TEISA), al preu de l'empresa.<br><b>Targeta de l'ATM</b>: títols per zones, que surten més barats si es viatja sovint. Es compren i es recarreguen als punts de venda.</p>
+          <table class="tarifes" aria-label="Tarifes de l'ATM de Girona"><thead><tr><th>Títol</th><th>1 zona</th><th>2 zones</th></tr></thead><tbody>
+            <tr><td>T-10 <small style="color:var(--muted)">(10 viatges)</small></td><td>6,40 €</td><td>12,25 €</td></tr>
+            <tr><td>T-10/30 <small style="color:var(--muted)">(10 viatges en 30 dies)</small></td><td>5,35 €</td><td>9,60 €</td></tr>
+            <tr><td>T-50/30 <small style="color:var(--muted)">(50 viatges en 30 dies)</small></td><td>18,65 €</td><td>29,30 €</td></tr>
+            <tr><td>T-MES <small style="color:var(--muted)">(30 dies, il·limitat)</small></td><td>26,65 €</td><td>40,00 €</td></tr>
+          </tbody></table>
+          <p class="txt" style="color:var(--muted);font-size:12px">T-JOVE (de 4 a 30 anys, 4 zones): 52,25 €. T-16 (de 4 a 16 anys, zona de residència): gratuïta. La targeta física costa 3,00 € (anònima) o 4,00 € (amb nom). Tarifes vigents des del 15.01.2026, amb el 50 % de descompte.</p>
+          <h2 style="margin-top:12px">Zones</h2>
+          <p class="txt">El preu depèn de les zones que travessa el viatge. La Bisbal és a la zona 5; Girona, a la 1; Palafrugell i Palamós, a la 6. Entre municipis veïns de zones diferents, amb un viatge directe, n'hi ha prou amb el títol d'una zona.</p>
+          <div class="zones-ll" id="zones-ll"></div>
+          <h2 style="margin-top:12px">Punts de venda i recàrrega a la Bisbal</h2>
+          <div class="list venda-ll" id="venda-ll"></div>
+          <p class="txt" style="margin-top:8px"><a class="bt" href="https://www.atmgirona.cat/tarifes/" target="_blank" rel="noopener">Tarifes</a> <a class="bt" href="https://www.atmgirona.cat/mapa-de-zones-comarcal/" target="_blank" rel="noopener">Zones</a> <a class="bt" href="https://www.atmgirona.cat/xarxa-de-venda-i-recarrega/" target="_blank" rel="noopener">Tots els punts de venda</a></p>
+        </div>
+      </details>
+    </section>
     <section>
       <h2>Properes sortides des de la Bisbal</h2>
       <div class="list" id="next"></div>
@@ -118,15 +159,19 @@ const avuiClau=d=>`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}
 const PALETA=["#1d5fae","#2f8f6f","#b5651d","#8c4a7a","#3b4f8c","#c0392b","#00838f","#6d4c41","#5f7f1f","#b03a6e","#2c6e8f","#8a6d1c"];
 
 const map=L.map("map",{zoomSnap:.5,minZoom:9,maxZoom:18}).setView([41.93,3.03],10.5);
-map.attributionControl.setPrefix(false).addAttribution("Límits: es-atlas (INE) · Horaris: Generalitat de Catalunya");
+map.attributionControl.setPrefix(false).addAttribution("Límits: es-atlas (INE) · Horaris: Generalitat de Catalunya · Traçats: OSRM, © OpenStreetMap · Zones i punts de venda: ATM de Girona");
 /* fons com el mapa dels llamps: municipis de la demarcació, sense tessel·les */
 map.createPane("fons").style.zIndex=250;
 const NOSTRES=["17022","17057","17902","17901","17205"];
 const ETIQ=["la Bisbal d'Empordà","Girona","Palafrugell","Palamós","Sant Feliu de Guíxols","Torroella de Montgrí","Begur","Pals","Corçà","Forallac","Cruïlles, Monells i Sant Sadurní de l'Heura","Calonge i Sant Antoni","Castell-Platja d'Aro","Llagostera","Cassà de la Selva","Celrà","Verges","l'Escala","Ullastret","Torrent","Santa Cristina d'Aro","Flaçà","Mont-ras"];
-fetch("https://latdg.github.io/tauler/llamps/girona.json").then(r=>r.json()).then(G=>{
+const FONS=fetch("https://latdg.github.io/tauler/llamps/girona.json").then(r=>r.json());
+FONS.then(G=>{
  const prov=topojson.feature(G,G.objects.provincies), mun=topojson.feature(G,G.objects.municipis);
  L.geoJSON(prov,{pane:"fons",interactive:false,style:f=>({color:"#9a958a",weight:f.id==="17"?2:1,fillColor:f.id==="17"?"#ffffff":"#f6f5f2",fillOpacity:1})}).addTo(map);
- L.geoJSON(mun,{pane:"fons",interactive:false,style:f=>({color:"#d6d2c8",weight:.6,fillColor:NOSTRES.includes(f.id)?"#f8e6df":"#fff",fillOpacity:NOSTRES.includes(f.id)?1:0})}).addTo(map);
+ const munFons=L.geoJSON(mun,{pane:"fons",interactive:false,style:f=>({color:"#d6d2c8",weight:.6,fillColor:NOSTRES.includes(f.id)?"#f8e6df":"#fff",fillOpacity:NOSTRES.includes(f.id)?1:0})}).addTo(map);
+ /* 05.11.2026: amb les zones de l'ATM a la vista, sense el rosat dels nostres municipis, perquè no es barregin els colors */
+ const rosat=on=>munFons.setStyle(f=>({fillOpacity:on&&NOSTRES.includes(f.id)?1:0}));
+ zonaLayer.on("add",()=>rosat(false)); zonaLayer.on("remove",()=>rosat(true)); if(map.hasLayer(zonaLayer)) rosat(false);
  L.geoJSON(prov.features.filter(f=>f.id==="17"),{pane:"fons",interactive:false,style:{color:"#6b6b66",weight:2,fill:false}}).addTo(map);
  const etiq=L.layerGroup();
  mun.features.forEach(f=>{ const n=String(f.properties&&f.properties.n||"").toLowerCase(); const e=ETIQ.find(x=>x.toLowerCase()===n); if(!e) return;
@@ -141,6 +186,44 @@ const carrers=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{pane
 const miraCarrers=()=>{const a=map.getZoom()>=13; if(a&&!map.hasLayer(carrers)) carrers.addTo(map); else if(!a&&map.hasLayer(carrers)) map.removeLayer(carrers); map.getContainer().classList.toggle("amb-carrers",a);};
 miraCarrers(); map.on("zoomend",miraCarrers);
 const lineLayer=L.layerGroup(), stopLayer=L.layerGroup(), busLayer=L.layerGroup(), clicLayer=L.layerGroup(), terLayer=L.layerGroup();
+const zonaLayer=L.layerGroup(), vendaLayer=L.layerGroup();
+
+/* ---- 05.11.2026: zones de l'ATM de Girona (data/zones_atm.json, del web de l'ATM) ---- */
+map.createPane("zones").style.zIndex=265;
+const ZCOL={1:"#e8a33d",2:"#7fb069",3:"#6aa6c9",4:"#9b7ec8",5:"#e06c75",6:"#3fa7a0",7:"#b5a642",8:"#4f7cc9",9:"#d4844f",10:"#8f9aa6",11:"#c27ba0"};
+const ZONES_PROPERES=["5","6","1","2","9"];
+Promise.all([FONS,fetch("data/zones_atm.json").then(r=>r.json())]).then(([G,Z])=>{
+ const zona={};   // codi del municipi -> [zones]
+ Object.entries(Z.zones).forEach(([z,o])=>o.m.forEach(id=>(zona[id]=zona[id]||[]).push(z)));
+ const mun=topojson.feature(G,G.objects.municipis);
+ L.geoJSON({type:"FeatureCollection",features:mun.features.filter(f=>zona[f.id])},{pane:"zones",
+  style:f=>({color:ZCOL[zona[f.id][0]],weight:.4,fillColor:ZCOL[zona[f.id][0]],fillOpacity:.22}),
+  onEachFeature:(f,l)=>{const zs=zona[f.id], nom=String(f.properties.n||"").replace(/^(La|El|Els|Les|L')(?=[ ']|\b)/,m=>m.toLowerCase());
+   l.bindTooltip(`<b>${nom}</b><br>${zs.length>1?"Zones "+zs.join(" i "):"Zona "+zs[0]} · ${zs.map(z=>Z.zones[z].n).join(" / ")}`,{sticky:true});}}).addTo(zonaLayer);
+ /* límits entre zones, més gruixuts */
+ const zid=g=>(zona[g.id]||["-"])[0];
+ L.geoJSON(topojson.mesh(G,G.objects.municipis,(a,b)=>a!==b&&zid(a)!==zid(b)),{pane:"zones",interactive:false,style:{color:"#5b5b57",weight:1.6,opacity:.8}}).addTo(zonaLayer);
+ Object.entries(Z.zones).forEach(([z,o])=>{
+  const geos=G.objects.municipis.geometries.filter(g=>zona[g.id]&&zona[g.id][0]===z); if(!geos.length) return;
+  /* l'etiqueta, dins d'un municipi de la zona (el més proper al centre): la zona 6 fa forma de franja */
+  const mig=L.geoJSON(topojson.merge(G,geos)).getBounds().getCenter();
+  const c=geos.map(g=>L.geoJSON(topojson.feature(G,g)).getBounds().getCenter()).reduce((x,y)=>mig.distanceTo(x)<=mig.distanceTo(y)?x:y);
+  L.tooltip({permanent:true,direction:"center",className:"etiq-zona",interactive:false}).setLatLng(c).setContent("Zona "+z).addTo(zonaLayer);});
+ document.getElementById("zones-ll").innerHTML=ZONES_PROPERES.map(z=>`<span class="sw zona" style="background:${ZCOL[z]}"></span><span><b>Zona ${z}</b> · ${Z.zones[z].n}</span>`).join("")+
+  `<span></span><small style="color:var(--muted)">Al mapa, amb la capa «Zones de l'ATM».</small>`;
+}).catch(()=>{});
+
+/* ---- 05.11.2026: punts de venda i recàrrega de l'ATM (data/venda.json) ---- */
+fetch("data/venda.json").then(r=>r.json()).then(V=>{
+ const ll=document.getElementById("venda-ll");
+ V.punts.forEach(p=>{
+  const pop=`<div class="pop"><h3>${p.n}</h3>${p.a}, ${p.m}<div class="m" style="margin-top:4px">Venda i recàrrega de targetes de l'ATM de Girona</div></div>`;
+  const mk=L.marker(p.ll,{icon:L.divIcon({className:"",html:'<div class="venda">T</div>',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:-200}).bindTooltip(`${p.n} · targetes ATM`).bindPopup(pop).addTo(vendaLayer);
+  const row=document.createElement("div"); row.className="row";
+  row.innerHTML=`<span class="venda" style="width:18px;height:18px">T</span><span class="what">${p.n}<small>${p.a}</small></span>`;
+  row.addEventListener("click",()=>{ const o=LAYERS.find(x=>x.id==="ly-venda"); if(!o.checked){document.getElementById("ly-venda").click();} map.setView(p.ll,17); venda(); mk.openPopup(); });
+  ll.appendChild(row);});
+}).catch(()=>{});
 
 /* ---- Clic.cat (full oficial) ---- */
 const CLIC=[
@@ -151,16 +234,21 @@ const FRANGES=[[8,9],[15,16],[18,19]];
 
 const LAYERS=[
  {id:"ly-bus",label:"Busos de línia",sub:"Posició segons horari",layer:busLayer,sw:'<span class="sw dot"></span>',on:true},
- {id:"ly-lin",label:"Traçats de les línies",sub:"D'una parada a la següent",layer:lineLayer,sw:'<span class="sw"></span>',on:true},
+ {id:"ly-lin",label:"Traçats de les línies",sub:"Per la carretera (OpenStreetMap)",layer:lineLayer,sw:'<span class="sw"></span>',on:true},
  {id:"ly-par",label:"Parades",sub:"Toca-les per veure quins busos hi passen (més grosses amb zoom)",layer:stopLayer,sw:'<span class="sw dot" style="background:#59626c;width:8px;height:8px"></span>',on:true},
  {id:"ly-clic",label:"Clic.cat a demanda",sub:"Rutes R1, R2 i R3 (només amb reserva)",layer:clicLayer,sw:'<span class="sw dash"></span>',on:true},
- {id:"ly-ter",label:"Inici i final dels trajectes",sub:"Rodona vermella a cada capçalera",layer:terLayer,sw:'<span class="sw ter"></span>',on:true}];
+ {id:"ly-ter",label:"Inici i final dels trajectes",sub:"Rodona vermella a cada capçalera",layer:terLayer,sw:'<span class="sw ter"></span>',on:true},
+ {id:"ly-venda",label:"Punts de venda de l'ATM",sub:"On es compren i es recarreguen les targetes (a la Bisbal; surten en acostar-s'hi)",layer:vendaLayer,sw:'<span class="sw vd">T</span>',on:true},
+ {id:"ly-zona",label:"Zones de l'ATM",sub:"Zones tarifàries de cada municipi",layer:zonaLayer,sw:'<span class="sw zona" style="background:linear-gradient(90deg,#e06c75 50%,#3fa7a0 50%)"></span>',on:false}];
 const lyEl=document.getElementById("layers");
 LAYERS.forEach(o=>{const l=document.createElement("label");l.className="layer";l.htmlFor=o.id;
  l.innerHTML=`<input type="checkbox" id="${o.id}" ${o.on?"checked":""}>${o.sw}<span>${o.label}<small>${o.sub}</small></span>`;
- lyEl.appendChild(l); if(o.on&&o.id!=="ly-par") o.layer.addTo(map);
- l.querySelector("input").addEventListener("change",e=>{o.checked=e.target.checked; if(o.id==="ly-par") return parades(); e.target.checked?o.layer.addTo(map):map.removeLayer(o.layer);});
+ lyEl.appendChild(l); if(o.on&&o.id!=="ly-par"&&o.id!=="ly-venda") o.layer.addTo(map);
+ l.querySelector("input").addEventListener("change",e=>{o.checked=e.target.checked; if(o.id==="ly-par") return parades(); if(o.id==="ly-venda") return venda(); e.target.checked?o.layer.addTo(map):map.removeLayer(o.layer);});
  o.checked=o.on;});
+/* 05.11.2026: els punts de venda, només de prop (zoom 14 o més), perquè de lluny taparien les parades de la Bisbal */
+function venda(){ const o=LAYERS.find(x=>x.id==="ly-venda"); (o.checked&&map.getZoom()>=14)?vendaLayer.addTo(map):map.removeLayer(vendaLayer); }
+map.on("zoomend",venda); venda();
 /* 01.11.2026: les parades surten sempre que la capa és activa (abans, només amb zoom 11 o més); de lluny, més petites */
 function parades(){ if(!LAYERS[2].checked) return map.removeLayer(stopLayer);
  const z=map.getZoom(), r=z>=12?4.5:z>=11?3.5:2.5;
@@ -184,8 +272,39 @@ function llistaLinies(){
  const files=Object.entries(D.rutes).sort((a,b)=>(a[1].dem-b[1].dem)||a[1].c.localeCompare(b[1].c,"ca",{numeric:true})).map(([rid,r])=>{
   const h=hor(r); const p=h&&h.pdf?`<a class="pdf" href="${h.pdf}" target="_blank" rel="noopener">PDF</a>`:"";
   const enll=(p||btBitllet(rid,true))?`<span class="acc">${p}${btBitllet(rid,true)}</span>`:`<small style="color:var(--muted)">${r.dem?"amb reserva":"sense venda en línia"}</small>`;
-  return `<div class="row"><span class="code" style="background:${color(rid)}">${r.c}</span><span class="what">${r.n}<small>${r.op||""}${h&&h.linia?" · línia "+h.linia:""}</small></span>${enll}</div>`;});
- document.getElementById("linies").innerHTML=files.join("")+`<div class="empty">PDF: horari oficial de l'empresa, quan el publica. Bitllet: web de compra de l'empresa (Moventis o TEISA). Clic.cat: ${CLIC_RES}.</div>`;
+  return `<div class="row"><span class="code" data-rid="${rid}" title="Mostra només aquesta línia" style="background:${color(rid)}">${r.c}</span><span class="what">${r.n}<small>${r.op||""}${h&&h.linia?" · línia "+h.linia:""}</small></span>${enll}</div>`;});
+ document.getElementById("linies").innerHTML=files.join("")+`<div class="empty">Toca el número d'una línia per veure-la sola al mapa. PDF: horari oficial de l'empresa, quan el publica. Bitllet: web de compra de l'empresa (Moventis o TEISA); amb targeta de l'ATM de Girona, els viatges dins de la seva àrea surten més barats (vegeu <a href="#atm">Bitllets i targetes de l'ATM</a>). Clic.cat: ${CLIC_RES}.</div>`;
+}
+document.getElementById("linies").addEventListener("click",e=>{const c=e.target.closest(".code[data-rid]"); if(c) triaLinia(c.dataset.rid,true);});
+
+/* ---- 05.11.2026: filtre per línia ---- */
+let FIL="";
+const selF=document.getElementById("filtre"), botoTots=document.getElementById("filtre-tots");
+function ompleFiltre(){
+ Object.entries(D.rutes).sort((a,b)=>(a[1].dem-b[1].dem)||a[1].c.localeCompare(b[1].c,"ca",{numeric:true})).forEach(([rid,r])=>{
+  const o=document.createElement("option"); o.value=rid; o.textContent=`${r.dem?"Clic ":""}${r.c} · ${r.n}`; selF.appendChild(o);});
+}
+function triaLinia(rid,centra){
+ FIL=D.rutes[rid]?rid:""; selF.value=FIL; botoTots.hidden=!FIL;
+ dibuixa(); tick();
+ if(FIL&&centra!==false&&D.rutes[FIL].t.length>1) map.fitBounds(L.polyline(D.rutes[FIL].t).getBounds(),{padding:[30,30],maxZoom:13});
+ if(FIL&&window.matchMedia("(max-width:760px)").matches) document.getElementById("map").scrollIntoView({behavior:"smooth"});
+}
+selF.addEventListener("change",()=>triaLinia(selF.value));
+botoTots.addEventListener("click",()=>triaLinia(""));
+const mostra=rid=>!FIL||rid===FIL;
+
+/* ---- 05.11.2026: el bus segueix la carretera (data/trams.json); si no hi ha el tram, en línia recta ---- */
+let T={}; const LLARG={};
+function llarg(k,pts){ if(LLARG[k]) return LLARG[k]; const c=[0]; const kx=Math.cos(pts[0][0]*Math.PI/180);
+ for(let i=1;i<pts.length;i++){const dx=(pts[i][1]-pts[i-1][1])*kx, dy=pts[i][0]-pts[i-1][0]; c.push(c[i-1]+Math.hypot(dx,dy));}
+ return LLARG[k]=c; }
+function posicio(a,b,f){
+ const k=a+">"+b, pts=T[k], A=D.parades[a].ll, B=D.parades[b].ll;
+ if(!pts||pts.length<2) return [A[0]+(B[0]-A[0])*f,A[1]+(B[1]-A[1])*f];
+ const c=llarg(k,pts), d=f*c[c.length-1]; let i=1; while(i<c.length-1&&c[i]<d) i++;
+ const g=(d-c[i-1])/((c[i]-c[i-1])||1);
+ return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*g, pts[i-1][1]+(pts[i][1]-pts[i-1][1])*g];
 }
 /* Nom de la parada amb el poble, si el nom no el porta ja */
 const nomP=sid=>{const p=D.parades[sid]; if(!p) return ""; return p.m&&!p.n.toLowerCase().includes(p.m.toLowerCase())?`${p.n} (${p.m})`:p.n;};
@@ -207,20 +326,23 @@ function sortidesParada(sid){
 const color=rid=>D.rutes[rid].dem?"#7a3fa0":(D.rutes[rid].col||PALETA[Object.keys(D.rutes).filter(k=>!D.rutes[k].dem).indexOf(rid)%PALETA.length]);
 
 function dibuixa(){
- Object.entries(D.rutes).forEach(([rid,r])=>{ if(r.t.length<2) return;
+ [lineLayer,clicLayer,terLayer,stopLayer].forEach(l=>l.clearLayers());
+ /* amb una línia triada, només les seves parades i capçaleres */
+ const seves=FIL?new Set(Object.values(D.dies).flatMap(vs=>vs.filter(v=>v.r===FIL).flatMap(v=>v.s.map(x=>x[0])))):null;
+ Object.entries(D.rutes).forEach(([rid,r])=>{ if(r.t.length<2||!mostra(rid)) return;
   const pop=`<div class="pop"><h3>${r.dem?"Clic ":"Línia "}${r.c}</h3>${r.n}<div class="m">${r.op||""}</div>${accions(rid)}</div>`;
   if(r.dem){ L.polyline(r.t,{color:"#7a3fa0",weight:2.5,dashArray:"6 5"}).bindTooltip(`<b>Clic ${r.c}</b> ${r.n}`,{sticky:true}).bindPopup(pop).addTo(clicLayer); return; }
   L.polyline(r.t,{color:"#fff",weight:7,interactive:false}).addTo(lineLayer);
   L.polyline(r.t,{color:color(rid),weight:3.5,opacity:.85}).bindTooltip(`<b>${r.c}</b> ${r.n}${r.op?" · "+r.op:""}`,{sticky:true}).bindPopup(pop).addTo(lineLayer);});
  /* capçaleres: on comença i acaba cada trajecte (rodona vermella) */
  const cap={};
- Object.values(D.dies).forEach(vs=>vs.forEach(v=>{ if(!D.rutes[v.r]) return;
+ Object.values(D.dies).forEach(vs=>vs.forEach(v=>{ if(!D.rutes[v.r]||!mostra(v.r)) return;
   [[v.s[0][0],"ini"],[v.s[v.s.length-1][0],"fi"]].forEach(([sid,k])=>{ const c=cap[sid]=cap[sid]||{ini:new Set(),fi:new Set()}; c[k].add(v.r); }); }));
  const cods=set=>[...set].map(rid=>D.rutes[rid].c).sort((a,b)=>a.localeCompare(b,"ca",{numeric:true})).join(", ");
  Object.entries(cap).forEach(([sid,c])=>{ const p=D.parades[sid]; if(!p) return;
   const t=`<b>${nomP(sid)}</b>${c.ini.size?`<br>Inici: ${cods(c.ini)}`:""}${c.fi.size?`<br>Final: ${cods(c.fi)}`:""}`;
   L.circleMarker(p.ll,{radius:7,color:"#fff",weight:2,fillColor:"#d0021b",fillOpacity:1}).bindTooltip(t).bindPopup(()=>sortidesParada(sid)).addTo(terLayer); });
- Object.entries(D.parades).forEach(([sid,p])=>L.circleMarker(p.ll,{radius:4,color:"#fff",weight:1.5,fillColor:"#59626c",fillOpacity:1}).bindTooltip(nomP(sid)).bindPopup(()=>sortidesParada(sid)).addTo(stopLayer));
+ Object.entries(D.parades).filter(([sid])=>!seves||seves.has(sid)).forEach(([sid,p])=>L.circleMarker(p.ll,{radius:4,color:"#fff",weight:1.5,fillColor:"#59626c",fillOpacity:1}).bindTooltip(nomP(sid)).bindPopup(()=>sortidesParada(sid)).addTo(stopLayer));
  parades();
 }
 
@@ -235,12 +357,12 @@ function tick(){
  if(!D) return;
  const viatges=D.dies[avuiClau(d)]||[];
  busLayer.clearLayers(); const ara=[], nx=[];
- viatges.forEach(v=>{ const s=v.s, r=D.rutes[v.r]; if(!r) return;
+ viatges.forEach(v=>{ const s=v.s, r=D.rutes[v.r]; if(!r||!mostra(v.r)) return;
   const dest=desti(v), orig=origen(v), fi=final(v), falten=Math.max(0,Math.round(fi-m));
   if(m>=s[0][1]&&m<=s[s.length-1][1]){
    let i=1; while(i<s.length-1&&s[i][1]<m) i++;
-   const a=D.parades[s[i-1][0]].ll, b=D.parades[s[i][0]].ll, dt=(s[i][1]-s[i-1][1])||1, f=Math.min(1,Math.max(0,(m-s[i-1][1])/dt));
-   const ll=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
+   const dt=(s[i][1]-s[i-1][1])||1, f=Math.min(1,Math.max(0,(m-s[i-1][1])/dt));
+   const ll=posicio(s[i-1][0],s[i][0],f);
    L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus${r.dem?" dem":""}" style="background:${color(v.r)}"><b>🚌</b>${r.c}</div>`,iconSize:null,iconAnchor:[22,9]})})
     .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min${accions(v.r)}<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
    ara.push({v,r,dest,orig,next:nomP(s[i][0]),arr:fi,falten});
@@ -257,10 +379,11 @@ function tick(){
    en lloc del codi intern del GTFS (1556, 1461, 1122…) */
 Promise.all([
  fetch("data/busos.json",{cache:"no-cache"}).then(r=>{if(!r.ok) throw new Error(r.status);return r.json();}),
- fetch("data/horaris.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{}).catch(()=>({}))])
- .then(([j,h])=>{D=j; H=h||{};
+ fetch("data/horaris.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{}).catch(()=>({})),
+ fetch("data/trams.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{}).catch(()=>({}))])
+ .then(([j,h,tr])=>{D=j; H=h||{}; T=(tr&&tr.trams)||{};
    Object.values(D.rutes).forEach(r=>{r.g=r.c; const x=H[r.c]; if(x&&x.num) r.c=x.num;});
-   dibuixa(); tick(); llistaLinies();
+   ompleFiltre(); dibuixa(); tick(); llistaLinies();
    document.getElementById("note").insertAdjacentHTML("beforeend",` Dades actualitzades el ${j.generat} h.`);})
  .catch(()=>{document.getElementById("now").innerHTML=`<div class="empty err">No s'han pogut carregar els horaris. Torna-ho a provar d'aquí a una estona.</div>`;});
 tick(); setInterval(tick,15000);
