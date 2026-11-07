@@ -367,12 +367,12 @@ function tick(){
    const ll=posicio(s[i-1][0],s[i][0],f);
    L.marker(ll,{icon:L.divIcon({className:"",html:`<div class="bus${r.dem?" dem":""}" style="background:${color(v.r)}"><b>🚌</b>${r.c}</div>`,iconSize:null,iconAnchor:[22,9]})})
     .bindPopup(`<div class="pop"><h3>Línia ${r.c}</h3><b>${orig} → ${dest}</b><br>Ha sortit de ${orig}${v.to!=null?` a les ${fmt(v.to)}`:""}<br>Pròxima parada: ${nomP(s[i][0])} (${fmt(s[i][1])} h)<br>Arriba a ${dest} a les ${fmt(fi)} · falten ${falten} min${accions(v.r)}<div class="m">${r.dem?"Servei a demanda: només circula si hi ha reserva · ":""}${r.op||""} · posició segons horari</div></div>`).addTo(busLayer);
-   ara.push({v,r,dest,orig,next:nomP(s[i][0]),arr:fi,falten});
+   ara.push({v,r,dest,orig,next:nomP(s[i][0]),tn:s[i][1],arr:fi,falten});
   }
   s.forEach(([sid,t],k)=>{ if(D.parades[sid].m==="la Bisbal d'Empordà"&&!/bisbal/i.test(dest)&&t>=m&&t<m+180) nx.push({v,r,dest,t,n:D.parades[sid].n}); });
  });
- ara.sort((a,b)=>a.arr-b.arr); nx.sort((a,b)=>a.t-b.t);
- document.getElementById("now").innerHTML=ara.length?ara.map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">${x.orig} → ${x.dest}<small>${x.r.dem?"Clic, a demanda · ":""}Pròxima: ${x.next}</small></span><span class="t">${fmt(x.arr)}<small style="display:block;color:var(--muted);font:12px var(--f-body);text-align:right">${x.falten} min</small></span></div>`).join(""):`<div class="empty">Ara no hi ha cap bus en ruta segons l'horari.</div>`;
+ ara.sort((a,b)=>a.tn-b.tn||a.arr-b.arr);   /* 07.11.2026: primer els que arriben abans a la pròxima parada */ nx.sort((a,b)=>a.t-b.t);
+ document.getElementById("now").innerHTML=ara.length?ara.map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">${x.orig} → ${x.dest}<small>${x.r.dem?"Clic, a demanda · ":""}Pròxima: ${x.next}, ${fmt(x.tn)} h</small></span><span class="t">${fmt(x.arr)}<small style="display:block;color:var(--muted);font:12px var(--f-body);text-align:right">${x.falten} min</small></span></div>`).join(""):`<div class="empty">Ara no hi ha cap bus en ruta segons l'horari.</div>`;
  const vist=new Set();
  document.getElementById("next").innerHTML=nx.filter(x=>{const k=x.r.c+x.t;if(vist.has(k))return false;vist.add(k);return true;}).slice(0,8).map(x=>`<div class="row"><span class="code" style="background:${color(x.v.r)}">${x.r.c}</span><span class="what">Cap a ${x.dest}<small>${x.n}</small></span><span class="t">${fmt(x.t)}</span></div>`).join("")||`<div class="empty">Cap sortida en les pròximes tres hores.</div>`;
 }
