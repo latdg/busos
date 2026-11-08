@@ -2,7 +2,7 @@
  "font": "ATM Àrea de Girona, xarxa de venda i recàrrega (consultat el 05.11.2026); coordenades del geocodificador de l'ICGC",
  "url": "https://www.atmgirona.cat/xarxa-de-venda-i-recarrega/",
  "punts": [
-  {"n": "Nehal Electrònics", "a": "av. de les Voltes, 38", "m": "la Bisbal d'Empordà", "ll": [41.96032, 3.04013]},
+  {"n": "Nehal Electrònics", "a": "av. de les Voltes, 32", "m": "la Bisbal d'Empordà", "ll": [41.960562, 3.039879]},
   {"n": "La Nube", "a": "c. de les Mesures, 5", "m": "la Bisbal d'Empordà", "ll": [41.95996, 3.03863]},
   {"n": "Locutori Abbassi", "a": "av. Josep Irla, 22-24, local 4", "m": "la Bisbal d'Empordà", "ll": [41.95608, 3.04103]},
   {"n": "Alimentació Bisbal", "a": "c. Cavallers, 10", "m": "la Bisbal d'Empordà", "ll": [41.96051, 3.03765]},
