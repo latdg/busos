@@ -40,19 +40,35 @@ def dins(lat, lon, b):
     return b["lat_min"] <= lat <= b["lat_max"] and b["lon_min"] <= lon <= b["lon_max"]
 
 
+# 13.11.2026: còpia de l'últim GTFS bo (el workflow la guarda a la memòria cau d'Actions).
+# Si el portal de la Generalitat falla, es fa servir aquesta còpia i el mapa no queda buit.
+COPIA = os.environ.get("GTFS_COPIA", os.path.join(os.path.dirname(__file__), "..", ".gtfs", "gtfs.zip"))
+
+
 def baixa():
-    for url in URLS:
-        try:
-            print("Baixant", url)
-            req = urllib.request.Request(url, headers={"User-Agent": "latdg-busos/1.0"})
-            with urllib.request.urlopen(req, timeout=120) as r:
-                data = r.read()
-            if data[:2] == b"PK":
-                return data
-            print("  no és un zip, la provo de saltar")
-        except Exception as e:  # noqa: BLE001
-            print("  error:", e)
-    sys.exit("No s'ha pogut baixar el GTFS de cap font.")
+    for intent in range(3):
+        if intent:
+            print(f"Torno a provar d'aquí a 30 s (intent {intent + 1} de 3)")
+            time.sleep(30)
+        for url in URLS:
+            try:
+                print("Baixant", url)
+                req = urllib.request.Request(url, headers={"User-Agent": "latdg-busos/1.0"})
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    data = r.read()
+                if data[:2] == b"PK":
+                    os.makedirs(os.path.dirname(COPIA), exist_ok=True)
+                    with open(COPIA, "wb") as f:
+                        f.write(data)
+                    return data
+                print("  no és un zip, la provo de saltar")
+            except Exception as e:  # noqa: BLE001
+                print("  error:", e)
+    if os.path.isfile(COPIA) and os.path.getsize(COPIA) > 0:
+        print("::warning::No s'ha pogut baixar el GTFS: faig servir l'última còpia bona.")
+        with open(COPIA, "rb") as f:
+            return f.read()
+    sys.exit("No s'ha pogut baixar el GTFS de cap font i no hi ha cap còpia anterior.")
 
 
 def llegeix(z, nom):

@@ -23,10 +23,26 @@ jobs:
         with:
           python-version: "3.12"
 
+      # 13.11.2026: última còpia bona del GTFS, per si el portal de la Generalitat falla
+      - name: Recupera l'última còpia bona del GTFS
+        uses: actions/cache/restore@v4
+        with:
+          path: .gtfs/gtfs.zip
+          key: gtfs-${{ github.run_id }}
+          restore-keys: gtfs-
+
       - name: Baixa el GTFS i genera data/busos.json
         env:
           GTFS_URL: ${{ vars.GTFS_URL }}
         run: python scripts/gtfs_baix.py
+
+      - name: Guarda la còpia del GTFS
+        if: hashFiles('.gtfs/gtfs.zip') != ''
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .gtfs/gtfs.zip
+          key: gtfs-${{ hashFiles('.gtfs/gtfs.zip') }}
 
       - name: Busca el PDF d'horaris vigent de cada línia (Moventis)
         continue-on-error: true
