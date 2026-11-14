@@ -14,6 +14,10 @@ TZ = ZoneInfo("Europe/Madrid")
 URLS = [u for u in [os.environ.get("GTFS_URL")] if u] + [
     "https://analisi.transparenciacatalunya.cat/download/bca2-b4i3/application%2Fzip",
     "https://analisi.transparenciacatalunya.cat/api/views/bca2-b4i3/files/default?download=true",
+    # 14.11.2026: el portal redirigeix a un servidor que no existeix. Mateix GTFS des de Territori
+    # i, com a darrer recurs, la còpia diària de la Mobility Database (feed mdb-2926).
+    "https://territori.gencat.cat/web/.content/home/serveis/visors-cartografia/bases-cartografiques/infraestructures-mobilitat/autobusos-interurbans/busos-interurbans-GTFS.zip",
+    "https://files.mobilitydatabase.org/mdb-2926/latest.zip",
 ]
 
 # 14.11.2026: fitxa del conjunt de dades al portal (porta l'identificador del zip vigent)
