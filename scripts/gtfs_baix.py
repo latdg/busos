@@ -4,7 +4,7 @@ les línies que passen pel Baix Empordà. Genera data/busos.json per al mapa.
 Ús:  python scripts/gtfs_baix.py               (baixa el GTFS)
      python scripts/gtfs_baix.py fitxer.zip    (fa servir un zip local)
 """
-import csv, io, json, math, os, re, sys, time, zipfile, urllib.request
+import csv, io, json, math, os, re, sys, time, zipfile, urllib.parse, urllib.request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -16,12 +16,15 @@ URLS = [u for u in [os.environ.get("GTFS_URL")] if u] + [
     "https://analisi.transparenciacatalunya.cat/api/views/bca2-b4i3/files/default?download=true",
 ]
 
+# 14.11.2026: fitxa del conjunt de dades al portal (porta l'identificador del zip vigent)
+VISTA = "https://analisi.transparenciacatalunya.cat/api/views/bca2-b4i3"
+
 # Requadre del Baix Empordà (amb una mica de marge cap a Girona per veure l'entrada dels busos)
 BBOX = dict(lat_min=41.74, lat_max=42.13, lon_min=2.80, lon_max=3.26)
 # Requadre estricte de la comarca: una línia hi ha de tenir com a mínim 2 parades
 COMARCA = dict(lat_min=41.76, lat_max=42.12, lon_min=2.89, lon_max=3.25)
 
-DIES = 2  # avui i demà
+DIES = 7  # 14.11.2026: una setmana, perquè si el portal falla uns dies el mapa no quedi buit
 
 SORTIDA = os.path.join(os.path.dirname(__file__), "..", "data", "busos.json")
 
@@ -45,12 +48,28 @@ def dins(lat, lon, b):
 COPIA = os.environ.get("GTFS_COPIA", os.path.join(os.path.dirname(__file__), "..", ".gtfs", "gtfs.zip"))
 
 
+def url_fitxer():
+    """14.11.2026: l'adreça directa del zip, a partir de l'identificador actual del fitxer al portal."""
+    try:
+        req = urllib.request.Request(VISTA, headers={"User-Agent": "latdg-busos/1.0"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            v = json.load(r)
+        blob = v.get("blobId")
+        if blob:
+            nom = urllib.parse.quote(v.get("blobFilename") or "gtfs.zip")
+            return f"{VISTA}/files/{blob}?download=true&filename={nom}"
+    except Exception as e:  # noqa: BLE001
+        print("  no he pogut llegir la fitxa del portal:", e)
+    return None
+
+
 def baixa():
     for intent in range(3):
         if intent:
             print(f"Torno a provar d'aquí a 30 s (intent {intent + 1} de 3)")
             time.sleep(30)
-        for url in URLS:
+        directa = url_fitxer()
+        for url in ([directa] if directa else []) + URLS:
             try:
                 print("Baixant", url)
                 req = urllib.request.Request(url, headers={"User-Agent": "latdg-busos/1.0"})
